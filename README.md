@@ -49,10 +49,10 @@ npm run build
 To build and run using Docker:
 
 ```bash
-docker build -t my-app .
+docker build -t image-poster .
 
 # Run the container
-docker run -p 3000:3000 my-app
+docker run -p 3000:3000 image-poster
 ```
 
 The containerized application can be deployed to any platform that supports Docker, including:
