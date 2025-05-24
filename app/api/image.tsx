@@ -1,6 +1,6 @@
 import {
   fileStorage,
-} from "~/image-storage.server";
+} from "~/lib/image-storage.server";
 import type { Route } from "./+types/image";
 
 export async function loader({ params }: Route.LoaderArgs) {

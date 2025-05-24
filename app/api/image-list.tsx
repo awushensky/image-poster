@@ -1,7 +1,7 @@
 import type { FileMetadata } from '@mjackson/file-storage';
 import ImageFile from '~/components/image-details';
 import type { Route } from "./+types/image-list";
-import { fileStorage } from '~/image-storage.server';
+import { fileStorage } from '~/lib/image-storage.server';
 import { useNavigate } from "react-router-dom";
 import { Link } from 'react-router';
 
@@ -11,6 +11,16 @@ export async function loader({ request }: Route.LoaderArgs) {
   const prefix = url.searchParams.get('prefix') || '';
   const limit = parseInt(url.searchParams.get('limit') || '10');
   const cursor = url.searchParams.get('cursor') || undefined;
+
+  if (isNaN(limit) || limit < 1) {
+    return { files: [], cursor: null };
+  }
+
+  if (limit > 100) {
+    throw new Response("Invalid limit. Valid values are 0 to 100", {
+      status: 400,
+    });
+  }
 
   return await fileStorage.list({
     cursor: cursor,
