@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router";
 import { PostingSummary } from "~/components/posting-summary";
 import type { Route } from "./+types/dashboard";
-import { getUserPostingTimes } from "~/db/user-database.server";
+import { getUserPostingTimes } from "~/db/database.server";
 import { requireUser } from "~/lib/session.server";
 
 export async function loader({ request }: Route.LoaderArgs) {

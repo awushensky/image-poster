@@ -1,6 +1,6 @@
 import type { FileUpload, FileUploadHandler } from "@mjackson/form-data-parser";
 import { fileStorage } from "~/lib/image-storage.server";
-import type { User } from "../db/user-database.server";
+import type { User } from "../db/database.server";
 
 export default function uploadHandler(user: User, fieldName: string, typeMatcher: RegExp) {
   const handler: FileUploadHandler = async (fileUpload: FileUpload) => {

@@ -1,5 +1,5 @@
 import { Link, Outlet } from "react-router";
-import type { Route } from "./+types/images";
+import type { Route } from "../pages/+types/images";
 import ImageUpload from "~/components/image-upload";
 import { parseFormData, } from "@mjackson/form-data-parser";
 import uploadHandler from "~/lib/upload-handler.server";

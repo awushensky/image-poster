@@ -1,6 +1,6 @@
 import PostingTimesSelector from '~/components/posting-time-selector';
-import { updateUserPostingTimes, getUserPostingTimes } from '~/db/user-database.server';
-import type { Route } from './+types/settings.posting-schedule';
+import { updateUserPostingTimes, getUserPostingTimes } from '~/db/database.server';
+import type { Route } from '../pages/+types/settings.posting-schedule';
 import { redirect } from 'react-router';
 import { useState } from 'react';
 import { requireUser } from '~/lib/session.server';

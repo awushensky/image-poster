@@ -1,6 +1,6 @@
 import { Link, Outlet } from "react-router";
 import { requireUser } from '~/lib/session.server';
-import type { Route } from './+types/settings';
+import type { Route } from '../pages/+types/settings';
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);

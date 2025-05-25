@@ -1,15 +1,20 @@
 import { createCookieSessionStorage } from 'react-router';
-import { getUserBySessionId, createUserSession as createDbSession, deleteUserSession } from '~/db/user-database.server';
+import {
+  createUserSession as createDbSession,
+  deleteSessionByToken,
+  getUserFromSession,
+  type User
+} from '~/db/database.server';
+import { isSessionValid, revokeUserSession } from './bluesky-auth.server';
 
-const sessionTTLMillis = 1000* 60 * 60 * 24 * 30; // 30 days in milliseconds
-const sessionIdKey = 'sessionId';
+const sessionTTLSeconds = 60 * 60 * 24 * 365; // 1 year in seconds
 const sessionIdCookieName = '__sessionId';
 
 const sessionStorage = createCookieSessionStorage({
   cookie: {
     name: sessionIdCookieName,
     httpOnly: true,
-    maxAge: 60 * 60 * 24 * 30, // 30 days
+    maxAge: sessionTTLSeconds,
     path: '/',
     sameSite: 'lax',
     secrets: [process.env.SESSION_SECRET || 'your-secret-key'],    // TODO: set up environment variables
@@ -17,11 +22,10 @@ const sessionStorage = createCookieSessionStorage({
   },
 });
 
-export async function createUserSession(userId: number, redirectTo: string) {
-  const sessionId = await createDbSession(userId, new Date(Date.now() + sessionTTLMillis));
-  
+export async function createUserSession(userDid: string, redirectTo: string) {
+  const sessionToken = await createDbSession(userDid);
   const session = await sessionStorage.getSession();
-  session.set(sessionIdKey, sessionId);
+  session.set('token', sessionToken);
   
   return new Response(null, {
     status: 302,
@@ -32,17 +36,27 @@ export async function createUserSession(userId: number, redirectTo: string) {
   });
 }
 
-export async function getUserSession(request: Request): Promise<string | null> {
+async function getSessionToken(request: Request): Promise<string | null> {
   const cookie = request.headers.get('Cookie');
   const session = await sessionStorage.getSession(cookie);
-  return session.get(sessionIdKey);
+  return session.get('token');
 }
 
-async function getUser(request: Request) {
-  const sessionId = await getUserSession(request);
-  if (!sessionId) return null;
+export async function getUser(request: Request): Promise<User | null> {
+  const sessionToken = await getSessionToken(request);
+  if (!sessionToken) return null;
   
-  return await getUserBySessionId(sessionId);
+  const user = await getUserFromSession(sessionToken);
+  if (!user) return null;
+  
+  // Ensure the user still has a valid session with Bluesky, otherwise log them out.
+  const hasValidBskySession = await isSessionValid(user.bluesky_did);
+  if (!hasValidBskySession) {
+    await deleteSessionByToken(sessionToken);
+    return null;
+  }
+
+  return user;
 }
 
 export async function requireUser(request: Request) {
@@ -53,20 +67,19 @@ export async function requireUser(request: Request) {
       headers: { Location: '/auth/login' }
     });
   }
+
   return user;
 }
 
-/**
- * Log the user out by deleting the session cookie and the session in the database. This
- * will redirect the user to the home page.
- * 
- * @param request 
- * @returns 
- */
 export async function logout(request: Request) {
-  const sessionId = await getUserSession(request);
-  if (sessionId) {
-    await deleteUserSession(sessionId);
+  const sessionToken = await getSessionToken(request);
+  
+  if (sessionToken) {
+    const user = await getUserFromSession(sessionToken);
+    if (user) {
+      await revokeUserSession(user.bluesky_did);
+    }
+    await deleteSessionByToken(sessionToken);
   }
   
   const session = await sessionStorage.getSession(request.headers.get('Cookie'));

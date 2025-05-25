@@ -1,166 +1,193 @@
-import { NodeOAuthClient } from '@atproto/oauth-client-node';
+import { NodeOAuthClient, type NodeSavedSession, type Session, TokenRefreshError, TokenRevokedError } from '@atproto/oauth-client-node';
+import { JoseKey } from '@atproto/jwk-jose';
 import { Agent } from '@atproto/api';
-import { createOrUpdateUser } from '~/db/user-database.server';
+import { 
+  createOrUpdateUser,
+  deleteOAuthSession,
+  getOAuthSession,
+  storeOAuthSession,
+} from '~/db/database.server';
 
-// Create OAuth client
-// export const oauthClient = new NodeOAuthClient({
-//   clientId: process.env.OAUTH_CLIENT_ID || 'http://localhost:3000/client-metadata.json',
-//   clientMetadata: {
-//     client_name: 'Bluesky Image Poster',
-//     client_id: process.env.OAUTH_CLIENT_ID || 'http://localhost:3000/client-metadata.json',
-//     client_uri: process.env.BASE_URL || 'http://localhost:3000',
-//     redirect_uris: [
-//       `${process.env.BASE_URL || 'http://localhost:3000'}/auth/callback`
-//     ],
-//     scope: 'atproto transition:generic',
-//     grant_types: ['authorization_code', 'refresh_token'],
-//     response_types: ['code'],
-//     application_type: 'web',
-//     token_endpoint_auth_method: 'none',
-//     dpop_bound_access_tokens: true,
-//   },
-//   stateStore: {
-//     set: async (key: string, internalState: any) => {
-//       // Store state temporarily - you might want to use Redis or database for production
-//       // For now, we'll use a simple in-memory store with expiration
-//       globalStateStore.set(key, {
-//         state: internalState,
-//         expires: Date.now() + 10 * 60 * 1000 // 10 minutes
-//       });
-//     },
-//     get: async (key: string) => {
-//       const stored = globalStateStore.get(key);
-//       if (!stored || stored.expires < Date.now()) {
-//         globalStateStore.delete(key);
-//         return undefined;
-//       }
-//       return stored.state;
-//     },
-//     del: async (key: string) => {
-//       globalStateStore.delete(key);
-//     }
-//   },
-//   sessionStore: {
-//     set: async (key: string, session: any) => {
-//       // Store session in database or secure storage
-//       await storeOAuthSession(key, session);
-//     },
-//     get: async (key: string) => {
-//       return await getOAuthSession(key);
-//     },
-//     del: async (key: string) => {
-//       await deleteOAuthSession(key);
-//     }
-//   }
-// });
+let oauthClient: NodeOAuthClient;
 
-// // Simple in-memory state store (use Redis in production)
-// const globalStateStore = new Map<string, { state: any; expires: number }>();
+async function initOAuthClient() {
+  if (oauthClient) return oauthClient;
 
-// // OAuth session storage functions (implement these in your database)
-// async function storeOAuthSession(key: string, session: any) {
-//   // Store in database - you might want to add an oauth_sessions table
-//   // For now, we'll store it with the user session
-//   console.log('Storing OAuth session:', key);
-// }
+  const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+  
+  const keyset = await Promise.all([
+    JoseKey.fromImportable(JSON.parse(process.env.PRIVATE_KEY_1!)),
+    JoseKey.fromImportable(JSON.parse(process.env.PRIVATE_KEY_2!)),
+    JoseKey.fromImportable(JSON.parse(process.env.PRIVATE_KEY_3!)),
+  ]);
 
-// async function getOAuthSession(key: string) {
-//   // Retrieve from database
-//   console.log('Getting OAuth session:', key);
-//   return null;
-// }
+  oauthClient = new NodeOAuthClient({
+    clientMetadata: {
+      client_id: `${baseUrl}/client-metadata.json`,
+      client_name: 'Bluesky Image Poster',
+      client_uri: baseUrl,
+      redirect_uris: [`${baseUrl}/auth/callback`],
+      grant_types: ['authorization_code', 'refresh_token'],
+      response_types: ['code'],
+      application_type: 'web',
+      token_endpoint_auth_method: 'private_key_jwt',
+      dpop_bound_access_tokens: true,
+      jwks_uri: `${baseUrl}/jwks.json`,
+    },
 
-// async function deleteOAuthSession(key: string) {
-//   // Delete from database
-//   console.log('Deleting OAuth session:', key);
-// }
+    keyset,
 
-// export async function createAuthUrl(): Promise<string> {
-//   const url = await oauthClient.authorize('bsky.social', {
-//     scope: 'atproto transition:generic'
-//   });
-//   return url.toString();
-// }
+    stateStore: {
+      async set(key: string, internalState: any): Promise<void> {
+        globalStateStore.set(key, {
+          state: internalState,
+          expires: Date.now() + 10 * 60 * 1000 // 10 minutes
+        });
+      },
+      async get(key: string): Promise<any> {
+        const stored = globalStateStore.get(key);
+        if (!stored || stored.expires < Date.now()) {
+          globalStateStore.delete(key);
+          return undefined;
+        }
+        return stored.state;
+      },
+      async del(key: string): Promise<void> {
+        globalStateStore.delete(key);
+      }
+    },
 
-// export async function handleAuthCallback(code: string, state: string) {
-//   try {
-//     const { session } = await oauthClient.callback(code, state);
-    
-//     // Create an agent from the session
-//     const agent = new Agent(session);
-    
-//     // Get user profile
-//     const profile = await agent.getProfile({ actor: session.sub });
-    
-//     if (!profile.success) {
-//       throw new Error('Failed to get user profile');
-//     }
+    sessionStore: {
+      async set(sub: string, session: NodeSavedSession): Promise<void> {
+        await storeOAuthSession(sub, session);
+      },
+      async get(sub: string): Promise<NodeSavedSession | undefined> {
+        return await getOAuthSession(sub);
+      },
+      async del(sub: string): Promise<void> {
+        await deleteOAuthSession(sub);
+      }
+    }
+  });
 
-//     // Store user in database
-//     const userData = {
-//       bluesky_handle: profile.data.handle,
-//       bluesky_did: profile.data.did,
-//       access_token: session.accessToken || '',
-//       refresh_token: session.refreshToken || '',
-//     };
+  setupOAuthEventListeners(oauthClient);
+  return oauthClient;
+}
 
-//     const user = await createOrUpdateUser(userData);
-//     return user;
-//   } catch (error) {
-//     console.error('OAuth callback error:', error);
-//     throw error;
-//   }
-// }
+/**
+ * BlueSky OAuth provides event listeners to handle token updates and session deletions.
+ * Previously, I thought we needed to manually handle token refreshes, but the client
+ * automatically manages this for us. We just need to listen for updates and deletions.
+ */
+function setupOAuthEventListeners(client: NodeOAuthClient) {
+  client.addEventListener('updated', async (event: CustomEvent<{ sub: string; } & Session>) => {
+    console.log('Received OAuth token refresh update:', event.detail.sub);
+  });
 
-// // Function to create an authenticated agent for a user
-// export async function createUserAgent(user: { bluesky_did: string }) {
-//   try {
-//     // Get the stored session for this user
-//     const session = await getOAuthSession(user.bluesky_did);
-//     if (!session) {
-//       throw new Error('No stored OAuth session found');
-//     }
+  client.addEventListener('deleted', async (event: CustomEvent<{
+    sub: string;
+    cause: TokenRefreshError | TokenRevokedError | unknown;
+  }>) => {
+    const { sub, cause } = event.detail;
+    console.log(`OAuth session ${sub} deleted: `, cause);
+  });
+}
 
-//     return new Agent(session);
-//   } catch (error) {
-//     console.error('Failed to create user agent:', error);
-//     throw new Error('Failed to authenticate with stored session');
-//   }
-// }
+export async function isSessionValid(userDid: string): Promise<boolean> {
+  try {
+    const client = await initOAuthClient();
+    await client.restore(userDid);
+    return true;
+  } catch (error) {
+    console.log(`OAuth session invalid for ${userDid}:`, error);
+    return false;
+  }
+}
 
-// // Function to post an image
-// export async function postImageToBluesky(
-//   user: { bluesky_did: string },
-//   imageBuffer: Buffer,
-//   altText: string = ''
-// ) {
-//   try {
-//     const agent = await createUserAgent(user);
+export async function revokeUserSession(userDid: string): Promise<void> {
+  try {
+    const client = await initOAuthClient();
+    await client.revoke(userDid);
+    console.log(`Successfully revoked OAuth session for: ${userDid}`);
+  } catch (error) {
+    console.error(`Failed to revoke OAuth session for ${userDid}:`, error);
+    throw error;
+  }
+}
 
-//     // Upload the image
-//     const uploadResult = await agent.uploadBlob(imageBuffer, {
-//       encoding: 'image/jpeg'
-//     });
+export async function createAuthUrl(handle: string): Promise<string> {
+  const client = await initOAuthClient();
+  const state = crypto.randomUUID();
+  
+  const url = await client.authorize(handle, { state });
+  return url.toString();
+}
 
-//     if (!uploadResult.success) {
-//       throw new Error('Failed to upload image to Bluesky');
-//     }
+export async function handleAuthCallback(params: URLSearchParams) {
+  const client = await initOAuthClient();
+  
+  const { session, state } = await client.callback(params);
+  
+  const agent = new Agent(session);
+  
+  const profile = await agent.getProfile({ actor: session.sub });
+  if (!profile.success) {
+    throw new Error('Failed to get user profile');
+  }
 
-//     // Create the post with the image
-//     const postResult = await agent.post({
-//       text: '', // You can add text here if desired
-//       embed: {
-//         $type: 'app.bsky.embed.images',
-//         images: [{
-//           alt: altText,
-//           image: uploadResult.data.blob
-//         }]
-//       }
-//     });
+  const userData = {
+    bluesky_handle: profile.data.handle,
+    bluesky_did: profile.data.did,
+  };
 
-//     return postResult;
-//   } catch (error) {
-//     console.error('Failed to post image to Bluesky:', error);
-//     throw error;
-//   }
-// }
+  const user = await createOrUpdateUser(userData);
+  return { user, state };
+}
+
+// Simple in-memory state store (use Redis in production)
+const globalStateStore = new Map<string, { state: any; expires: number }>();
+
+export async function restoreUserSession(userDid: string): Promise<Agent> {
+  const client = await initOAuthClient();
+  const session = await client.restore(userDid);
+  return new Agent(session);
+}
+
+export async function postImageToBluesky(
+  userDid: string,
+  imageBuffer: Buffer,
+  altText: string = ''
+) {
+  try {
+    const agent = await restoreUserSession(userDid);
+
+    const uploadResult = await agent.uploadBlob(imageBuffer, {
+      encoding: 'image/jpeg'
+    });
+
+    if (!uploadResult.success) {
+      throw new Error('Failed to upload image to Bluesky');
+    }
+
+    const postResult = await agent.post({
+      text: '',
+      embed: {
+        $type: 'app.bsky.embed.images',
+        images: [{
+          alt: altText,
+          image: uploadResult.data.blob
+        }]
+      }
+    });
+
+    return postResult;
+  } catch (error) {
+    console.error('Failed to post image to Bluesky:', error);
+    throw error;
+  }
+}
+
+// Export client for metadata endpoints
+export async function getOAuthClient() {
+  return await initOAuthClient();
+}
