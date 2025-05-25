@@ -32,7 +32,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   try {
     const { user, state: returnedState } = await handleAuthCallback(params);
-    console.log('User authenticated successfully:', user.bluesky_handle, 'State:', returnedState);
+    console.log('User authenticated successfully:', user.bluesky_did, 'State:', returnedState);
     
     // Create session and redirect to dashboard
     return createUserSession(user.bluesky_did, '/dashboard');

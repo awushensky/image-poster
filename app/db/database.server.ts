@@ -5,18 +5,24 @@ import type { NodeSavedSession } from '@atproto/oauth-client-node';
 import { createHmac } from 'crypto';
 
 
-let db: SqliteDatabase;
-
 export interface User {
   id: number;
-  bluesky_handle: string;
   bluesky_did: string;
   created_at: string;
   last_login: string;
 }
 
-export async function initDatabase() {
-  db = await open({
+let _db: SqliteDatabase | undefined;
+
+async function ensureDatabase() {
+  if (!_db) {
+    _db = await initDatabase();
+  }
+  return _db;
+}
+
+async function initDatabase() {
+  const db = await open({
     filename: './data/app.db',
     driver: Database.Database
   });
@@ -24,7 +30,6 @@ export async function initDatabase() {
   await db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      bluesky_handle TEXT UNIQUE NOT NULL,
       bluesky_did TEXT UNIQUE NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       last_login DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -54,35 +59,40 @@ export async function initDatabase() {
       UNIQUE(session_token)
     );
   `);
+
+  return db;
 }
 
 /*********************************
  * User Management
  **********************************/
 export async function getUserByHandle(handle: string): Promise<User | undefined> {
+  const db = await ensureDatabase();
   return await db.get('SELECT * FROM users WHERE bluesky_handle = ?', [handle]);
 }
 
 export async function getUserByDid(did: string): Promise<User | undefined> {
+  const db = await ensureDatabase();
   return await db.get('SELECT * FROM users WHERE bluesky_did = ?', [did]);
 }
 
-export async function createOrUpdateUser(userData: Omit<User, 'id' | 'created_at' | 'last_login'>): Promise<User> {
-  const existing = await getUserByDid(userData.bluesky_did);
+export async function createOrUpdateUser(bluesky_did: string): Promise<User> {
+  const db = await ensureDatabase();
+  const existing = await getUserByDid(bluesky_did);
   
   if (existing) {
     await db.run(`
       UPDATE users 
       SET last_login = CURRENT_TIMESTAMP 
       WHERE bluesky_did = ?
-    `, [userData.bluesky_did]);
-    return (await getUserByDid(userData.bluesky_did))!;
+    `, [bluesky_did]);
+    return (await getUserByDid(bluesky_did))!;
   } else {
     await db.run(`
-      INSERT INTO users (bluesky_handle, bluesky_did)
-      VALUES (?, ?)
-    `, [userData.bluesky_handle, userData.bluesky_did]);
-    return (await getUserByDid(userData.bluesky_did))!;
+      INSERT INTO users (bluesky_did)
+      VALUES (?)
+    `, [bluesky_did]);
+    return (await getUserByDid(bluesky_did))!;
   }
 }
 
@@ -90,6 +100,7 @@ export async function createOrUpdateUser(userData: Omit<User, 'id' | 'created_at
  * Posting Time Management
  **********************************/
 export async function getUserPostingTimes(userId: number): Promise<PostingTime[]> {
+  const db = await ensureDatabase();
   const rows = await db.all(
     'SELECT hour, minute FROM posting_times WHERE user_id = ? ORDER BY hour, minute',
     [userId]
@@ -98,6 +109,7 @@ export async function getUserPostingTimes(userId: number): Promise<PostingTime[]
 }
 
 export async function updateUserPostingTimes(userId: number, times: PostingTime[]): Promise<void> {
+  const db = await ensureDatabase();
   await db.run('BEGIN TRANSACTION');
   try {
     await db.run('DELETE FROM posting_times WHERE user_id = ?', [userId]);
@@ -117,6 +129,7 @@ export async function updateUserPostingTimes(userId: number, times: PostingTime[
 }
 
 export async function getPostingsDueAt(hour: number, minute: number): Promise<Array<{user: User, time: PostingTime}>> {
+  const db = await ensureDatabase();
   return await db.all(`
     SELECT u.*, pt.hour, pt.minute
     FROM users u 
@@ -136,10 +149,7 @@ function generateSessionToken(userDid: string): string {
 }
 
 export async function createUserSession(userDid: string): Promise<string> {
-  const user = await getUserByDid(userDid);
-  if (!user) {
-    throw new Error(`User not found for DID: ${userDid}`);
-  }
+  const user = await createOrUpdateUser(userDid);
 
   const sessionToken = generateSessionToken(userDid);
   const existingSession = await getOAuthSession(userDid);
@@ -147,6 +157,7 @@ export async function createUserSession(userDid: string): Promise<string> {
     throw new Error(`No OAuth session found for user: ${userDid}`);
   }
   
+  const db = await ensureDatabase();
   await db.run(`
     INSERT OR REPLACE INTO user_sessions (session_token, user_id, session_data, last_used_at)
     VALUES (?, ?, ?, CURRENT_TIMESTAMP)
@@ -156,6 +167,7 @@ export async function createUserSession(userDid: string): Promise<string> {
 }
 
 export async function getUserFromSession(session_token: string): Promise<User | null> {
+  const db = await ensureDatabase();
   const row = await db.get(`
     SELECT u.*, us.last_used_at
     FROM user_sessions us
@@ -172,7 +184,6 @@ export async function getUserFromSession(session_token: string): Promise<User | 
     
     return {
       id: row.id,
-      bluesky_handle: row.bluesky_handle,
       bluesky_did: row.bluesky_did,
       created_at: row.created_at,
       last_login: row.last_login
@@ -183,6 +194,7 @@ export async function getUserFromSession(session_token: string): Promise<User | 
 }
 
 export async function deleteSessionByToken(session_token: string): Promise<void> {
+  const db = await ensureDatabase();
   await db.run('DELETE FROM user_sessions WHERE session_token = ?', [session_token]);
 }
 
@@ -190,12 +202,13 @@ export async function deleteSessionByToken(session_token: string): Promise<void>
  * OAuth Session Management
  **********************************/
 export async function storeOAuthSession(userDid: string, session: NodeSavedSession): Promise<void> {
-  const user = await getUserByDid(userDid);
+  const user = await createOrUpdateUser(userDid);
   if (!user) {
     throw new Error(`User not found for DID: ${userDid}`);
   }
 
   const sessionToken = generateSessionToken(userDid);
+  const db = await ensureDatabase();
   await db.run(`
     INSERT OR REPLACE INTO user_sessions (session_token, user_id, session_data, last_used_at)
     VALUES (?, ?, ?, CURRENT_TIMESTAMP)
@@ -203,6 +216,7 @@ export async function storeOAuthSession(userDid: string, session: NodeSavedSessi
 }
 
 export async function getOAuthSession(userDid: string): Promise<NodeSavedSession | undefined> {
+  const db = await ensureDatabase();
   const row = await db.get(`
     SELECT us.session_data
     FROM user_sessions us
@@ -214,6 +228,7 @@ export async function getOAuthSession(userDid: string): Promise<NodeSavedSession
 }
 
 export async function deleteOAuthSession(userDid: string): Promise<void> {
+  const db = await ensureDatabase();
   await db.run(`
     DELETE FROM user_sessions 
     WHERE user_id = (SELECT id FROM users WHERE bluesky_did = ?)

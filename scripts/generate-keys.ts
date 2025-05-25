@@ -1,4 +1,4 @@
-import { generateKeyPairSync } from 'crypto';
+import { generateKeyPairSync, randomUUID } from 'crypto';
 import { writeFileSync, existsSync } from 'fs';
 
 async function generateKeys() {
@@ -14,9 +14,12 @@ async function generateKeys() {
     
     // Export as JWK format
     const privateJwk = privateKey.export({ format: 'jwk' });
-    const publicJwk = publicKey.export({ format: 'jwk' });
     
-    // Combine into a single JWK (private key contains public key info too)
+    // Add unique key ID and usage parameters
+    privateJwk.kid = `key-${i + 1}-${randomUUID()}`;
+    privateJwk.use = 'sig';
+    privateJwk.alg = 'ES256';
+    
     keys.push(privateJwk);
   }
 
@@ -37,7 +40,7 @@ PRIVATE_KEY_3='${JSON.stringify(keys[2])}'
     console.log('✅ Keys written to .env file');
   }
   
-  console.log('🔐 Generated 3 ES256 keys for JWT signing');
+  console.log('🔐 Generated 3 ES256 keys with unique IDs for JWT signing');
 }
 
 generateKeys().catch(console.error);

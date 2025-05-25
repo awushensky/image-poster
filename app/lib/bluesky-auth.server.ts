@@ -1,7 +1,7 @@
 import { NodeOAuthClient, type NodeSavedSession, type Session, TokenRefreshError, TokenRevokedError } from '@atproto/oauth-client-node';
 import { JoseKey } from '@atproto/jwk-jose';
 import { Agent } from '@atproto/api';
-import { 
+import {
   createOrUpdateUser,
   deleteOAuthSession,
   getOAuthSession,
@@ -23,12 +23,10 @@ async function initOAuthClient() {
 
   oauthClient = new NodeOAuthClient({
     clientMetadata: {
-      // client_id: `${baseUrl}/client-metadata.json`,
-      client_id: `https://arch.local.darknova.me:3000/client-metadata.json`,
-      client_name: 'Bluesky Image Poster',
+      client_id: `${baseUrl}/client-metadata.json`,
+      client_name: 'LuminBlaz\'s Automatic Image Poster',
       client_uri: baseUrl,
-      // redirect_uris: [`${baseUrl}/auth/callback`],
-      redirect_uris: [`https://arch.local.darknova.me:3000/auth/callback`],
+      redirect_uris: [`${baseUrl}/auth/callback`],
       scope: 'atproto transition:generic',
       grant_types: ['authorization_code', 'refresh_token'],
       response_types: ['code'],
@@ -36,8 +34,7 @@ async function initOAuthClient() {
       token_endpoint_auth_method: 'private_key_jwt',
       token_endpoint_auth_signing_alg: 'ES256',
       dpop_bound_access_tokens: true,
-      // jwks_uri: `${baseUrl}/jwks.json`,
-      jwks_uri: `http://localhost:3000/jwks.json`,
+      jwks_uri: `${baseUrl}/jwks.json`,
     },
 
     keyset,
@@ -140,12 +137,7 @@ export async function handleAuthCallback(params: URLSearchParams) {
     throw new Error('Failed to get user profile');
   }
 
-  const userData = {
-    bluesky_handle: profile.data.handle,
-    bluesky_did: profile.data.did,
-  };
-
-  const user = await createOrUpdateUser(userData);
+  const user = await createOrUpdateUser(profile.data.did);
   return { user, state };
 }
 
