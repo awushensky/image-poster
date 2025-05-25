@@ -13,7 +13,7 @@ let oauthClient: NodeOAuthClient;
 async function initOAuthClient() {
   if (oauthClient) return oauthClient;
 
-  const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+  const baseUrl = process.env.BASE_URL;
   
   const keyset = await Promise.all([
     JoseKey.fromImportable(JSON.parse(process.env.PRIVATE_KEY_1!)),
@@ -23,16 +23,21 @@ async function initOAuthClient() {
 
   oauthClient = new NodeOAuthClient({
     clientMetadata: {
-      client_id: `${baseUrl}/client-metadata.json`,
+      // client_id: `${baseUrl}/client-metadata.json`,
+      client_id: `https://arch.local.darknova.me:3000/client-metadata.json`,
       client_name: 'Bluesky Image Poster',
       client_uri: baseUrl,
-      redirect_uris: [`${baseUrl}/auth/callback`],
+      // redirect_uris: [`${baseUrl}/auth/callback`],
+      redirect_uris: [`https://arch.local.darknova.me:3000/auth/callback`],
+      scope: 'atproto transition:generic',
       grant_types: ['authorization_code', 'refresh_token'],
       response_types: ['code'],
       application_type: 'web',
       token_endpoint_auth_method: 'private_key_jwt',
+      token_endpoint_auth_signing_alg: 'ES256',
       dpop_bound_access_tokens: true,
-      jwks_uri: `${baseUrl}/jwks.json`,
+      // jwks_uri: `${baseUrl}/jwks.json`,
+      jwks_uri: `http://localhost:3000/jwks.json`,
     },
 
     keyset,
@@ -129,7 +134,7 @@ export async function handleAuthCallback(params: URLSearchParams) {
   const { session, state } = await client.callback(params);
   
   const agent = new Agent(session);
-  
+
   const profile = await agent.getProfile({ actor: session.sub });
   if (!profile.success) {
     throw new Error('Failed to get user profile');
