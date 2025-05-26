@@ -1,0 +1,216 @@
+import { ensureDatabase } from "./database.server";
+import type { DatabaseModule } from "./util";
+
+
+export interface QueuedImage {
+  id: number;
+  user_did: number;
+  storage_key: string;
+  post_text: string;
+  is_nsfw: boolean;
+  queue_order: number;
+  created_at: string;
+}
+
+export const imageQueueDatabaseConfig: DatabaseModule = {
+  name: 'queued_images',
+  dependencies: ['users'],
+  initSQL: `
+    CREATE TABLE IF NOT EXISTS queued_images (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_did TEXT NOT NULL,
+      storage_key TEXT NOT NULL,
+      post_text TEXT NOT NULL,
+      is_nsfw BOOLEAN DEFAULT TRUE NOT NULL,
+      queue_order INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      FOREIGN KEY (user_did) REFERENCES users (did) ON DELETE CASCADE,
+      UNIQUE(user_did, queue_order)
+    );
+  `
+};
+
+export async function createImageQueueEntry(
+  userDid: string,
+  storageKey: string,
+  postText: string
+): Promise<QueuedImage> {
+  const db = await ensureDatabase();
+  
+  await db.run('BEGIN TRANSACTION');
+
+  try {
+    const result = await db.get(
+      'SELECT MAX(queue_order) as max_order FROM queued_images WHERE user_did = ?',
+      [userDid]
+    ) as { max_order: number | null };
+    const nextOrder = (result.max_order || 0) + 1;
+    
+    // Fixed: use storage_key consistently (matching table schema)
+    await db.run(`
+      INSERT INTO queued_images (user_did, storage_key, post_text, queue_order)
+      VALUES (?, ?, ?, ?)
+    `, [userDid, storageKey, postText, nextOrder]);
+    
+    await db.run('COMMIT');
+  } catch (error) {
+    await db.run('ROLLBACK');
+    throw error;
+  }
+  
+  return await readImageQueueEntry(userDid, storageKey);
+}
+
+export async function readImageQueueEntry(userDid: string, storageKey: string): Promise<QueuedImage> {
+  const db = await ensureDatabase();
+  // Fixed: use storage_key consistently
+  const image = await db.get(
+    'SELECT * FROM queued_images WHERE user_did = ? AND storage_key = ?',
+    [userDid, storageKey]
+  );
+
+  if (!image) {
+    throw new Error('Image not found in queue');
+  }
+  
+  return image;
+}
+
+export async function updateImageQueueEntry(
+  userDid: string,
+  imageId: number,
+  updates: Partial<Pick<QueuedImage, 'post_text' | 'is_nsfw'>>
+): Promise<void> {
+  const db = await ensureDatabase();
+  
+  const setParts = [];
+  const values = [];
+  
+  if (updates.post_text !== undefined) {
+    setParts.push('post_text = ?');
+    values.push(updates.post_text);
+  }
+  
+  if (updates.is_nsfw !== undefined) {
+    setParts.push('is_nsfw = ?');
+    values.push(updates.is_nsfw);
+  }
+  
+  if (setParts.length === 0) return;
+  
+  values.push(userDid, imageId);
+  
+  await db.run(`
+    UPDATE queued_images 
+    SET ${setParts.join(', ')} 
+    WHERE user_did = ? AND id = ?
+  `, values);
+}
+
+export async function getImageQueueForUser(userDid: string): Promise<QueuedImage[]> {
+  const db = await ensureDatabase();
+  return await db.all(
+    'SELECT * FROM queued_images WHERE user_did = ? ORDER BY queue_order ASC',
+    [userDid]
+  );
+}
+
+export async function reorderImageInQueue(
+  userDid: string,
+  sourceOrder: number,
+  destinationOrder: number,
+): Promise<void> {
+  if (sourceOrder === destinationOrder) return;
+
+  const db = await ensureDatabase();
+  
+  await db.run('BEGIN TRANSACTION');
+  
+  try {
+    const currentImage = await db.get(
+      'SELECT * FROM queued_images WHERE user_did = ? AND queue_order = ?',
+      [userDid, sourceOrder]
+    ) as QueuedImage;
+    
+    if (!currentImage) {
+      throw new Error('Image not found');
+    }
+
+    // Move source image to temporary position -1
+    await db.run(`
+      UPDATE queued_images
+      SET queue_order = -1
+      WHERE user_did = ? AND id = ?
+    `, [userDid, currentImage.id]);
+    
+    // Shift all images in the range
+    await db.run(`
+      UPDATE queued_images
+      SET queue_order = queue_order + ?
+      WHERE user_did = ? AND queue_order BETWEEN ? AND ?
+    `, [
+      destinationOrder < sourceOrder ? 1 : -1, 
+      userDid, 
+      Math.min(sourceOrder, destinationOrder), 
+      Math.max(sourceOrder, destinationOrder)
+    ]);
+    
+    // Move source image to final destination
+    await db.run(`
+      UPDATE queued_images
+      SET queue_order = ?
+      WHERE user_did = ? AND id = ?
+    `, [destinationOrder, userDid, currentImage.id]);
+    
+    await db.run('COMMIT');
+  } catch (error) {
+    await db.run('ROLLBACK');
+    throw error;
+  }
+}
+
+export async function deleteFromImageQueue(userDid: string, imageId: number): Promise<void> {
+  const db = await ensureDatabase();
+  
+  await db.run('BEGIN TRANSACTION');
+  
+  try {
+    const imageToDelete = await db.get(
+      'SELECT * FROM queued_images WHERE user_did = ? AND id = ?',
+      [userDid, imageId]
+    ) as QueuedImage;
+    
+    if (!imageToDelete) {
+      throw new Error('Image not found');
+    }
+    
+    await db.run(
+      'DELETE FROM queued_images WHERE user_did = ? AND id = ?',
+      [userDid, imageId]
+    );
+    
+    // Reorder remaining images to fill the gap
+    await db.run(`
+      UPDATE queued_images 
+      SET queue_order = queue_order - 1 
+      WHERE user_did = ? AND queue_order > ?
+    `, [userDid, imageToDelete.queue_order]);
+    
+    await db.run('COMMIT');
+  } catch (error) {
+    await db.run('ROLLBACK');
+    throw error;
+  }
+}
+
+export async function getNextImageToPostForUser(userDid: string): Promise<QueuedImage | undefined> {
+  const db = await ensureDatabase();
+  
+  return await db.get(`
+    SELECT qi.*
+    FROM queued_images qi
+    WHERE qi.user_did = ?
+    ORDER BY qi.queue_order ASC
+    LIMIT 1
+  `, [userDid]);
+}

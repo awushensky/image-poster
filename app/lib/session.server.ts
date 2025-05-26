@@ -3,9 +3,9 @@ import {
   createUserSession as createDbSession,
   deleteSessionByToken,
   getUserFromSession,
-  type User
-} from '~/db/database.server';
+} from '~/db/user-session-database.server';
 import { isSessionValid, revokeUserSession } from './bluesky-auth.server';
+import type { User } from '~/db/user-database.server';
 
 const sessionTTLSeconds = 60 * 60 * 24 * 365; // 1 year in seconds
 const sessionIdCookieName = '__sessionId';
@@ -50,7 +50,7 @@ export async function getUser(request: Request): Promise<User | null> {
   if (!user) return null;
   
   // Ensure the user still has a valid session with Bluesky, otherwise log them out.
-  const hasValidBskySession = await isSessionValid(user.bluesky_did);
+  const hasValidBskySession = await isSessionValid(user.did);
   if (!hasValidBskySession) {
     await deleteSessionByToken(sessionToken);
     return null;
@@ -77,7 +77,7 @@ export async function logout(request: Request) {
   if (sessionToken) {
     const user = await getUserFromSession(sessionToken);
     if (user) {
-      await revokeUserSession(user.bluesky_did);
+      await revokeUserSession(user.did);
     }
     await deleteSessionByToken(sessionToken);
   }

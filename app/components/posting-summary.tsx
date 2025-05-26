@@ -1,4 +1,4 @@
-import type { PostingTime } from "~/lib/time";
+import type { PostingTime } from "~/db/posting-time-database.server";
 
 interface PostingSummaryProps {
   times: PostingTime[];

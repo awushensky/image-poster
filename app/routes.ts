@@ -1,7 +1,7 @@
 import { type RouteConfig, index, route } from "@react-router/dev/routes";
 
 export default [
-  index("routes/home.tsx"),
+  index("routes/dashboard.tsx"),
 
   // Auth routes
   route("auth/login", "routes/auth.login.tsx"),
@@ -14,12 +14,6 @@ export default [
 
   // Main app routes (protected)
   route("dashboard", "routes/dashboard.tsx"),
-  
-  // Image routes -- TODO combine with dashboard
-  route("images", "routes/images.tsx", [
-    route("image-list", "api/image-list.tsx"),
-    route("image/:storageKey", "api/image.tsx"),
-  ]),
 
   // Settings routes
   route("settings", "routes/settings.tsx", [

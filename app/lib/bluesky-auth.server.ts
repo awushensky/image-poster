@@ -1,12 +1,12 @@
 import { NodeOAuthClient, type NodeSavedSession, type Session, TokenRefreshError, TokenRevokedError } from '@atproto/oauth-client-node';
 import { JoseKey } from '@atproto/jwk-jose';
 import { Agent } from '@atproto/api';
+import { createOrUpdateUser } from '~/db/user-database.server';
 import {
-  createOrUpdateUser,
   deleteOAuthSession,
   getOAuthSession,
   storeOAuthSession,
-} from '~/db/database.server';
+} from '~/db/user-session-database.server';
 
 let oauthClient: NodeOAuthClient;
 
@@ -141,7 +141,7 @@ export async function handleAuthCallback(params: URLSearchParams) {
   return { user, state };
 }
 
-// Simple in-memory state store (use Redis in production)
+// Simple in-memory state store. TODO: replace this with something better for production use.
 const globalStateStore = new Map<string, { state: any; expires: number }>();
 
 export async function restoreUserSession(userDid: string): Promise<Agent> {
@@ -184,7 +184,6 @@ export async function postImageToBluesky(
   }
 }
 
-// Export client for metadata endpoints
 export async function getOAuthClient() {
   return await initOAuthClient();
 }

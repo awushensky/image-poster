@@ -1,13 +1,13 @@
 import PostingTimesSelector from '~/components/posting-time-selector';
-import { updateUserPostingTimes, getUserPostingTimes } from '~/db/database.server';
-import type { Route } from '../pages/+types/settings.posting-schedule';
+import { updateUserPostingTimes, getUserPostingTimes } from '~/db/posting-time-database.server';
+import type { Route } from './+types/settings.posting-schedule';
 import { redirect } from 'react-router';
 import { useState } from 'react';
 import { requireUser } from '~/lib/session.server';
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
-  const postingTimes = await getUserPostingTimes(user.id);
+  const postingTimes = await getUserPostingTimes(user.did);
   return { postingTimes };
 }
 
@@ -17,7 +17,7 @@ export async function action({ request }: Route.ActionArgs) {
   const timesJson = formData.get('posting_times') as string;
   const times = JSON.parse(timesJson);
   
-  await updateUserPostingTimes(user.id, times);
+  await updateUserPostingTimes(user.did, times);
   return redirect('/dashboard');
 }
 
@@ -33,7 +33,7 @@ export default function PostingScheduleSettings({ loaderData }: Route.ComponentP
       body: formData
     });
     
-    // Navigate back or show success message
+    // TODO Navigate back or show success message
   };
 
   return (

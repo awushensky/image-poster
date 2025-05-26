@@ -1,13 +1,13 @@
 import { useNavigate } from "react-router";
 import { PostingSummary } from "~/components/posting-summary";
 import type { Route } from "./+types/dashboard";
-import { getUserPostingTimes } from "~/db/database.server";
+import { getUserPostingTimes } from "~/db/posting-time-database.server";
 import { requireUser } from "~/lib/session.server";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
   
-  const postingTimes = await getUserPostingTimes(user.id);
+  const postingTimes = await getUserPostingTimes(user.did);
   
   return { user, postingTimes };
 }
@@ -30,4 +30,3 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
     </div>
   );
 }
-

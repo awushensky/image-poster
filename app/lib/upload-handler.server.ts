@@ -1,6 +1,6 @@
 import type { FileUpload, FileUploadHandler } from "@mjackson/form-data-parser";
 import { fileStorage } from "~/lib/image-storage.server";
-import type { User } from "../db/database.server";
+import type { User } from "../db/user-database.server";
 
 export default function uploadHandler(user: User, fieldName: string, typeMatcher: RegExp) {
   const handler: FileUploadHandler = async (fileUpload: FileUpload) => {
@@ -8,7 +8,7 @@ export default function uploadHandler(user: User, fieldName: string, typeMatcher
       fileUpload.fieldName === fieldName &&
       typeMatcher.test(fileUpload.type)
     ) {
-      const storageKey = `users/${user.bluesky_did}/${fileUpload.name}`;
+      const storageKey = `users/${user.did}/${fileUpload.name}`;
 
       try {
         // FileUpload objects are not meant to stick around for very long (they are

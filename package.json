@@ -6,7 +6,13 @@
     "build": "react-router build",
     "dev": "react-router dev",
     "start": "react-router-serve ./build/server/index.js",
-    "typecheck": "react-router typegen && tsc"
+    "typecheck": "react-router typegen && tsc",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage",
+    "test:database": "vitest run tests/database",
+    "test:ui": "vitest --ui"
   },
   "dependencies": {
     "@atproto/api": "^0.15.8",
@@ -31,9 +37,12 @@
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@types/sqlite3": "^3.1.11",
+    "@vitest/ui": "^3.1.4",
+    "c8": "^10.1.3",
     "tailwindcss": "^4.1.4",
     "typescript": "^5.8.3",
     "vite": "^6.3.3",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.1.4"
   }
 }

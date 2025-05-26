@@ -82,6 +82,39 @@ Make sure to deploy the output of `npm run build`
 
 This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
 
----
+# Testing Guide
 
-Built with ❤️ using React Router.
+This test suite provides comprehensive coverage for your database operations without requiring manual testing or a live database connection.
+
+## 🚀 Quick Start
+
+```bash
+# Run all tests
+npm run test
+
+# Run tests in watch mode (re-runs on file changes)
+npm run test:watch
+
+# Run only database tests
+npm run test:database
+
+# Run tests with coverage report
+npm run test:coverage
+
+# Open visual test UI
+npm run test:ui
+```
+
+## 📁 Test Structure
+
+```
+tests/
+├── setup/
+│   ├── database-test-setup.ts    # Test database setup & utilities
+│   └── test-setup.ts             # Global test configuration
+└── database/
+    ├── database-initialization.test.ts   # Schema & dependency tests
+    ├── user-database.test.ts            # User operations tests
+    ├── posting-time-database.test.ts    # Posting time tests
+    └── image-queue-database.test.ts     # Image queue tests
+```
