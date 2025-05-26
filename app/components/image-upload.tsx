@@ -4,13 +4,11 @@ import { Form } from "react-router";
 interface ImageUploadProps {
   title?: string;
   acceptedTypes?: string;
-  className?: string;
 }
 
 export default function ImageUpload({
   title = "Upload Image",
   acceptedTypes = "image/*",
-  className = "",
 }: ImageUploadProps) {
   const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -37,7 +35,6 @@ export default function ImageUpload({
       if (inputRef.current) {
         inputRef.current.files = e.dataTransfer.files;
       }
-      // Optionally auto-submit the form:
       if (formRef.current) {
         formRef.current.requestSubmit();
       }
@@ -50,7 +47,7 @@ export default function ImageUpload({
 
   return (
     <div
-      className={`border border-gray-300 p-4 mb-8 ${className}`}
+      className={`border border-gray-300 p-4 mb-8`}
     >
       <h2 className="text-xl font-semibold mb-4">{title}</h2>
       <Form

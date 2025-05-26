@@ -8,6 +8,8 @@ export default [
   route("auth/callback", "routes/auth.callback.tsx"),
   route("auth/logout", "routes/auth.logout.tsx"),
 
+  route("image/:storageKey", "routes/image.tsx"),
+
   // OAuth routes
   route("client-metadata.json", "routes/client-metadata.json.tsx"),
   route("jwks.json", "routes/jwks.json.tsx"),
