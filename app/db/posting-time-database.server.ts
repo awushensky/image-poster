@@ -1,6 +1,6 @@
 import { ensureDatabase } from './database.server';
 import type { User } from './user-database.server';
-import type { DatabaseModule } from './util';
+import { type DatabaseModule } from './util';
 
 
 export interface PostingTime {

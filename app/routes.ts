@@ -12,9 +12,6 @@ export default [
   route("client-metadata.json", "routes/client-metadata.json.tsx"),
   route("jwks.json", "routes/jwks.json.tsx"),
 
-  // Main app routes (protected)
-  route("dashboard", "routes/dashboard.tsx"),
-
   // Settings routes
   route("settings", "routes/settings.tsx", [
     route("posting-schedule", "routes/settings.posting-schedule.tsx"),

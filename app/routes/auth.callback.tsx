@@ -34,8 +34,8 @@ export async function loader({ request }: Route.LoaderArgs) {
     const { user, state: returnedState } = await handleAuthCallback(params);
     console.log('User authenticated successfully:', user.did, 'State:', returnedState);
     
-    // Create session and redirect to dashboard
-    return createUserSession(user.did, '/dashboard');
+    // Create session and redirect to main page
+    return createUserSession(user.did, '/');
   } catch (error) {
     console.error('Auth callback error:', error);
     

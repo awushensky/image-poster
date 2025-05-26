@@ -13,6 +13,7 @@ import {
   getOAuthSession,
   deleteOAuthSession
 } from '../../app/db/user-session-database.server';
+import { getUserByDid } from '../../app/db/user-database.server';
 
 vi.mock('../../app/db/database.server', () => ({
   ensureDatabase: vi.fn(() => getTestDatabase())
@@ -936,6 +937,7 @@ describe('User Session Database Operations', () => {
   describe('Database Constraints and Edge Cases', () => {
     it('should enforce foreign key constraint on user_did', async () => {
       const db = getTestDatabase();
+      await expect(getUserByDid('did:nonexistent:user')).resolves.toBeUndefined();
 
       await expect(
         db.run(`
@@ -1062,7 +1064,7 @@ describe('User Session Database Operations', () => {
         const token1 = await createUserSession(testUserDid);
         const token2 = await createUserSession(testUserDid2);
 
-        expect(token1, `${token1} is the same as ${token2}`).not.toBe(token2);
+        expect(token1).not.toBe(token2);
 
         createHmacSpy.mockRestore();
       });

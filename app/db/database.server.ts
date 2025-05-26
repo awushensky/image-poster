@@ -29,6 +29,19 @@ async function initDatabase() {
     filename: './data/app.db',
     driver: Database.Database
   });
+  
+  console.log('Checking database modules...');
+  databaseModules.forEach((module, index) => {
+    if (!module) {
+      console.error(`❌ Database module at index ${index} is undefined`);
+      throw new Error(`Database module at index ${index} is undefined. Check your imports in database.server.ts`);
+    }
+    if (!module.name) {
+      console.error(`❌ Database module at index ${index} is missing 'name' property:`, module);
+      throw new Error(`Database module at index ${index} is missing 'name' property`);
+    }
+    console.log(`✓ Found module: ${module.name}`);
+  });
 
   const sortedModules = topologicalSort(databaseModules);
   for (const module of sortedModules) {

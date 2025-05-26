@@ -18,7 +18,7 @@ export async function action({ request }: Route.ActionArgs) {
   const times = JSON.parse(timesJson);
   
   await updateUserPostingTimes(user.did, times);
-  return redirect('/dashboard');
+  return redirect('/');
 }
 
 export default function PostingScheduleSettings({ loaderData }: Route.ComponentProps) {

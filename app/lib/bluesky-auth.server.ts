@@ -7,8 +7,25 @@ import {
   getOAuthSession,
   storeOAuthSession,
 } from '~/db/user-session-database.server';
+import { Mutex } from 'async-mutex';
+
 
 let oauthClient: NodeOAuthClient;
+
+const mutexes = new Map<string, Mutex>();
+
+function getOrCreateMutex(key: string): Mutex {
+  if (!mutexes.has(key)) {
+    mutexes.set(key, new Mutex());
+  }
+  return mutexes.get(key)!;
+}
+
+async function acquireInMemoryLock<T>(name: string, fn: () => T | Promise<T> | PromiseLike<T>): Promise<T> {
+  return await getOrCreateMutex(name).runExclusive(async () => {
+    return await fn();
+  });
+}
 
 async function initOAuthClient() {
   if (oauthClient) return oauthClient;
@@ -69,7 +86,12 @@ async function initOAuthClient() {
       async del(sub: string): Promise<void> {
         await deleteOAuthSession(sub);
       }
-    }
+    },
+
+    requestLock: async <T>(name: string, fn: () => T | Promise<T> | PromiseLike<T>): Promise<T> => {
+      const lockKey = `oauth:lock:${name}`;
+      return acquireInMemoryLock(name, fn);
+    },
   });
 
   setupOAuthEventListeners(oauthClient);
@@ -141,7 +163,8 @@ export async function handleAuthCallback(params: URLSearchParams) {
   return { user, state };
 }
 
-// Simple in-memory state store. TODO: replace this with something better for production use.
+// Because this is only deployed on a single instance, we can use a simple in-memory store.
+// If we deploy to multiple instances, we should switch to a distributed cache like Redis.
 const globalStateStore = new Map<string, { state: any; expires: number }>();
 
 export async function restoreUserSession(userDid: string): Promise<Agent> {
