@@ -1,24 +1,6 @@
+import type { User } from '~/model/database';
 import { ensureDatabase } from './database.server';
-import type { DatabaseModule } from './util';
 
-
-export interface User {
-  did: string;
-  created_at: string;
-  last_login: string;
-}
-
-export const userDatabaseConfig: DatabaseModule = {
-  name: 'users',
-  dependencies: [],
-  initSQL: `
-    CREATE TABLE IF NOT EXISTS users (
-      did TEXT PRIMARY KEY,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      last_login DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `
-};
 
 export async function getUserByDid(did: string): Promise<User | undefined> {
   const db = await ensureDatabase();

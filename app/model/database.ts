@@ -1,0 +1,21 @@
+export interface User {
+  did: string;
+  created_at: string;
+  last_login: string;
+}
+
+export interface PostingTime {
+  hour: number;
+  minute: number;
+  day_of_week: number;
+}
+
+export interface QueuedImage {
+  id: number;
+  user_did: number;
+  storage_key: string;
+  post_text: string;
+  is_nsfw: boolean;
+  queue_order: number;
+  created_at: string;
+}

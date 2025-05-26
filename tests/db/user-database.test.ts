@@ -7,9 +7,13 @@ import {
 } from '../setup/database-test-setup';
 import { getUserByDid, createOrUpdateUser } from '../../app/db/user-database.server';
 
-vi.mock('../../app/db/database.server', () => ({
-  ensureDatabase: vi.fn(() => getTestDatabase())
-}));
+vi.mock(import("../../app/db/database.server"), async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    ensureDatabase: vi.fn(() => getTestDatabase())
+  }
+})
 
 describe('User Database Operations', () => {
   beforeEach(async () => {

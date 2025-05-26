@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
 import { Clock, Plus, X, Calendar, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import TimeInput from './time-input';
-import type { PostingTime } from "~/db/posting-time-database.server";
 
 
 interface PostingTimesSelectorProps {
   initialTimes?: PostingTime[];
   onChange?: (times: PostingTime[]) => void;
+}
+
+export interface PostingTime {
+  hour: number;
+  minute: number;
+  days?: number[];
 }
 
 // Optimized for furry fandom demographics: 18-25, US coasts, tech/university
@@ -91,7 +96,7 @@ export default function PostingTimesSelector({
   onChange
 }: PostingTimesSelectorProps) {
   const [selectedTimes, setSelectedTimes] = useState<PostingTime[]>(initialTimes);
-  const [newTime, setNewTime] = useState<PostingTime>({ hour: 19, minute: 0, days: [] });
+  const [newTime, setNewTime] = useState<PostingTime>({ hour: 19, minute: 0 });
   const [mode, setMode] = useState<'presets' | 'custom'>('presets');
   const [showDaySelector, setShowDaySelector] = useState(false);
 

@@ -1,34 +1,6 @@
+import type { QueuedImage } from "~/model/database";
 import { ensureDatabase } from "./database.server";
-import type { DatabaseModule } from "./util";
 
-
-export interface QueuedImage {
-  id: number;
-  user_did: number;
-  storage_key: string;
-  post_text: string;
-  is_nsfw: boolean;
-  queue_order: number;
-  created_at: string;
-}
-
-export const imageQueueDatabaseConfig: DatabaseModule = {
-  name: 'queued_images',
-  dependencies: ['users'],
-  initSQL: `
-    CREATE TABLE IF NOT EXISTS queued_images (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_did TEXT NOT NULL,
-      storage_key TEXT NOT NULL,
-      post_text TEXT NOT NULL,
-      is_nsfw BOOLEAN DEFAULT TRUE NOT NULL,
-      queue_order INTEGER NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-      FOREIGN KEY (user_did) REFERENCES users (did) ON DELETE CASCADE,
-      UNIQUE(user_did, queue_order)
-    );
-  `
-};
 
 export async function createImageQueueEntry(
   userDid: string,

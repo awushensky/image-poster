@@ -1,19 +1,5 @@
 import { open, Database as SqliteDatabase } from 'sqlite';
 import Database from 'sqlite3';
-import { userDatabaseConfig } from './user-database.server';
-import { postingTimeDatabaseConfig } from './posting-time-database.server';
-import { imageQueueDatabaseConfig } from './image-queue-database.server';
-import { userSessionDatabaseConfig } from './user-session-database.server';
-import { topologicalSort, type DatabaseModule } from './util';
-
-
-// Database module registry
-const databaseModules: DatabaseModule[] = [
-  userDatabaseConfig,
-  postingTimeDatabaseConfig,
-  imageQueueDatabaseConfig,
-  userSessionDatabaseConfig,
-];
 
 let _db: SqliteDatabase | undefined;
 
@@ -29,30 +15,51 @@ async function initDatabase() {
     filename: './data/app.db',
     driver: Database.Database
   });
-  
-  console.log('Checking database modules...');
-  databaseModules.forEach((module, index) => {
-    if (!module) {
-      console.error(`❌ Database module at index ${index} is undefined`);
-      throw new Error(`Database module at index ${index} is undefined. Check your imports in database.server.ts`);
-    }
-    if (!module.name) {
-      console.error(`❌ Database module at index ${index} is missing 'name' property:`, module);
-      throw new Error(`Database module at index ${index} is missing 'name' property`);
-    }
-    console.log(`✓ Found module: ${module.name}`);
-  });
 
-  const sortedModules = topologicalSort(databaseModules);
-  for (const module of sortedModules) {
-    try {
-      await db.exec(module.initSQL);
-      console.log(`✓ ${module.name} initialized successfully`);
-    } catch (error) {
-      console.error(`✗ Failed to initialize ${module.name}:`, error);
-      throw error;
-    }
-  }
+  setupTables(db);
 
   return db;
+}
+
+export async function setupTables(db: SqliteDatabase) {
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      did TEXT PRIMARY KEY,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_login DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    CREATE TABLE IF NOT EXISTS queued_images (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_did TEXT NOT NULL,
+      storage_key TEXT NOT NULL,
+      post_text TEXT NOT NULL,
+      is_nsfw BOOLEAN DEFAULT TRUE NOT NULL,
+      queue_order INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      FOREIGN KEY (user_did) REFERENCES users (did) ON DELETE CASCADE,
+      UNIQUE(user_did, queue_order)
+    );
+    
+    CREATE TABLE IF NOT EXISTS posting_times (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_did TEXT NOT NULL,
+      hour INTEGER NOT NULL CHECK (hour >= 0 AND hour <= 23),
+      minute INTEGER NOT NULL CHECK (minute >= 0 AND minute <= 59),
+      day_of_week INTEGER NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_did) REFERENCES users (did) ON DELETE CASCADE,
+      UNIQUE(user_did, hour, minute, day_of_week)
+    );
+    
+    CREATE TABLE IF NOT EXISTS user_sessions (
+      session_token TEXT NOT NULL,
+      user_did TEXT PRIMARY KEY,
+      session_data TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_used_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_did) REFERENCES users (did) ON DELETE CASCADE,
+      UNIQUE(session_token)
+    );`
+  );
 }

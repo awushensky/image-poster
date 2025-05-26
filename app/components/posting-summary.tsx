@@ -1,4 +1,5 @@
-import type { PostingTime } from "~/db/posting-time-database.server";
+import type { PostingTime } from "./posting-time-selector";
+
 
 interface PostingSummaryProps {
   times: PostingTime[];

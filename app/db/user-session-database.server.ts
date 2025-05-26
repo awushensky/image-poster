@@ -1,25 +1,9 @@
 import { ensureDatabase } from './database.server';
 import { createHmac } from 'crypto';
-import { createOrUpdateUser, type User } from './user-database.server';
+import { createOrUpdateUser } from './user-database.server';
 import type { NodeSavedSession } from '@atproto/oauth-client-node';
-import type { DatabaseModule } from './util';
+import type { User } from '~/model/database';
 
-
-export const userSessionDatabaseConfig: DatabaseModule = {
-  name: 'user_sessions',
-  dependencies: ['users'],
-  initSQL: `
-    CREATE TABLE IF NOT EXISTS user_sessions (
-      session_token TEXT NOT NULL,
-      user_did TEXT PRIMARY KEY,
-      session_data TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      last_used_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_did) REFERENCES users (did) ON DELETE CASCADE,
-      UNIQUE(session_token)
-    );
-  `
-};
 
 /*********************************
  * User Session Management

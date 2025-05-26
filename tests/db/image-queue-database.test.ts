@@ -14,9 +14,13 @@ import {
   getNextImageToPostForUser
 } from '../../app/db/image-queue-database.server';
 
-vi.mock('../../app/db/database.server', () => ({
-  ensureDatabase: vi.fn(() => getTestDatabase())
-}));
+vi.mock(import("../../app/db/database.server"), async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    ensureDatabase: vi.fn(() => getTestDatabase())
+  }
+})
 
 describe('Image Queue Database Operations', () => {
   const testUserDid = 'did:test:user123';

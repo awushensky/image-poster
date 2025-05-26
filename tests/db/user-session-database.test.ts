@@ -15,9 +15,13 @@ import {
 } from '../../app/db/user-session-database.server';
 import { getUserByDid } from '../../app/db/user-database.server';
 
-vi.mock('../../app/db/database.server', () => ({
-  ensureDatabase: vi.fn(() => getTestDatabase())
-}));
+vi.mock(import("../../app/db/database.server"), async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    ensureDatabase: vi.fn(() => getTestDatabase())
+  }
+})
 
 vi.mock('crypto', () => ({
   createHmac: vi.fn(() => ({
@@ -641,12 +645,12 @@ describe('User Session Database Operations', () => {
         expect(storedSessions).toHaveLength(1);
       });
 
-      it('should throw error for non-existent user', async () => {
-        // This test depends on whether your createOrUpdateUser creates users automatically
-        // If it creates users, this test would need to be modified
+      it('should create a user if one does not exist', async () => {
         await expect(
           storeOAuthSession('did:nonexistent:user', mockOAuthSession)
-        ).rejects.toThrow();
+        ).resolves;
+
+        await expect(getUserByDid('did:nonexistent:user')).resolves.toContain({ did: 'did:nonexistent:user' })
       });
     });
 

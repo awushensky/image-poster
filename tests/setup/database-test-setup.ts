@@ -1,34 +1,16 @@
 import { open, Database as SqliteDatabase } from 'sqlite';
 import Database from 'sqlite3';
-import { userDatabaseConfig } from '../../app/db/user-database.server';
-import { postingTimeDatabaseConfig } from '../../app/db/posting-time-database.server';
-import { imageQueueDatabaseConfig } from '../../app/db/image-queue-database.server';
-import { userSessionDatabaseConfig } from '../../app/db/user-session-database.server';
-import { topologicalSort, type DatabaseModule } from '../../app/db/util';
-
-const testDatabaseModules: DatabaseModule[] = [
-  userDatabaseConfig,
-  postingTimeDatabaseConfig,
-  imageQueueDatabaseConfig,
-  userSessionDatabaseConfig,
-];
+import { setupTables } from '../../app/db/database.server';
 
 let testDb: SqliteDatabase | undefined;
 
-/**
- * Create an in-memory test database.
- */
 async function createTestDatabase(): Promise<SqliteDatabase> {
   const db = await open({
     filename: ':memory:',
     driver: Database.Database
   });
-
-  const sortedModules = topologicalSort(testDatabaseModules);
   
-  for (const module of sortedModules) {
-    await db.exec(module.initSQL);
-  }
+  setupTables(db);
 
   return db;
 }

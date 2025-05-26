@@ -1,5 +1,5 @@
 import { Clock } from "lucide-react";
-import type { PostingTime } from "~/db/posting-time-database.server";
+import type { PostingTime } from "./posting-time-selector";
 
 interface TimeInputProps {
   value: PostingTime;

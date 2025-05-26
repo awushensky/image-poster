@@ -10,9 +10,13 @@ import {
   getUsersWithPostingDueAt
 } from '../../app/db/posting-time-database.server';
 
-vi.mock('../../app/db/database.server', () => ({
-  ensureDatabase: vi.fn(() => getTestDatabase())
-}));
+vi.mock(import("../../app/db/database.server"), async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    ensureDatabase: vi.fn(() => getTestDatabase())
+  }
+})
 
 describe('Posting Time Database Operations', () => {
   const testUserDid = 'did:test:user123';
