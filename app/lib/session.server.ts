@@ -5,7 +5,7 @@ import {
   getUserFromSession,
 } from '~/db/user-session-database.server';
 import { isSessionValid, revokeUserSession } from './bluesky-auth.server';
-import type { User } from '~/model/database';
+import type { User } from "~/model/model";
 
 const sessionTTLSeconds = 60 * 60 * 24 * 365; // 1 year in seconds
 const sessionIdCookieName = '__sessionId';

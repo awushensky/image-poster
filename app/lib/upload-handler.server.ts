@@ -2,7 +2,7 @@ import type { FileUpload, FileUploadHandler } from "@mjackson/form-data-parser";
 import { createHash } from "crypto";
 import { createImageQueueEntry } from "~/db/image-queue-database.server";
 import { fileStorage } from "~/lib/image-storage.server";
-import type { User } from "~/model/database";
+import type { User } from "~/model/model";
 
 export default function uploadHandler(user: User, fieldName: string, typeMatcher: RegExp) {
   const handler: FileUploadHandler = async (fileUpload: FileUpload) => {

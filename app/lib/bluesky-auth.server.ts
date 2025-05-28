@@ -159,7 +159,7 @@ export async function handleAuthCallback(params: URLSearchParams) {
     throw new Error('Failed to get user profile');
   }
 
-  const user = await createOrUpdateUser(profile.data.did);
+  const user = await createOrUpdateUser(profile.data.did, profile.data.handle, profile.data.displayName, profile.data.avatar);
   return { user, state };
 }
 

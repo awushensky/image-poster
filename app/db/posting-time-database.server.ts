@@ -1,4 +1,5 @@
-import type { PostingTime, User } from '~/model/database';
+import type { PostingTime } from "~/model/model";
+import type { User } from "~/model/model";
 import { ensureDatabase } from './database.server';
 
 

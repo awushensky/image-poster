@@ -1,4 +1,4 @@
-import type { QueuedImage } from "~/model/database";
+import type { QueuedImage } from "~/model/model";
 
 interface ImageListProps {
   images: QueuedImage[];

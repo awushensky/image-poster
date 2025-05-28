@@ -5,7 +5,7 @@ import { redirect } from 'react-router';
 import { useState } from 'react';
 import { requireUser } from '~/lib/session.server';
 import { type PostingTime as ComponentPostingTime } from '~/components/posting-time-selector';
-import { type PostingTime as DatabasePostingTime } from '~/model/database';
+import { type PostingTime as DatabasePostingTime } from "~/model/model";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);

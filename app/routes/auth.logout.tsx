@@ -1,5 +1,5 @@
 import { logout } from '~/lib/session.server';
-import type { Route } from '../pages/+types/auth.logout';
+import type { Route } from './+types/auth.logout';
 
 export async function action({ request }: Route.ActionArgs) {
   return logout(request);

@@ -1,5 +1,8 @@
 export interface User {
   did: string;
+  handle: string;
+  display_name?: string;
+  avatar_url?: string;
   created_at: string;
   last_login: string;
 }

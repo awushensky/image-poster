@@ -1,8 +1,7 @@
 import { ensureDatabase } from './database.server';
 import { createHmac } from 'crypto';
-import { createOrUpdateUser } from './user-database.server';
 import type { NodeSavedSession } from '@atproto/oauth-client-node';
-import type { User } from '~/model/database';
+import type { User } from "~/model/model";
 
 
 /*********************************
@@ -20,8 +19,6 @@ function generateSessionToken(userDid: string): string {
 }
 
 export async function createUserSession(userDid: string): Promise<string> {
-  const user = await createOrUpdateUser(userDid);
-
   const sessionToken = generateSessionToken(userDid);
   const existingSession = await getOAuthSession(userDid);
   if (!existingSession) {
@@ -32,7 +29,7 @@ export async function createUserSession(userDid: string): Promise<string> {
   await db.run(`
     INSERT OR REPLACE INTO user_sessions (session_token, user_did, session_data, last_used_at)
     VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-  `, [sessionToken, user.did, JSON.stringify(existingSession)]);
+  `, [sessionToken, userDid, JSON.stringify(existingSession)]);
   
   return sessionToken;
 }
@@ -66,17 +63,12 @@ export async function deleteSessionByToken(session_token: string): Promise<void>
  * OAuth Session Management
  **********************************/
 export async function storeOAuthSession(userDid: string, session: NodeSavedSession): Promise<void> {
-  const user = await createOrUpdateUser(userDid);
-  if (!user) {
-    throw new Error(`User not found for DID: ${userDid}`);
-  }
-
   const sessionToken = generateSessionToken(userDid);
   const db = await ensureDatabase();
   await db.run(`
-    INSERT OR REPLACE INTO user_sessions (session_token, user_did, session_data, last_used_at)
+    INSERT OR REPLACE INTO user_sessions (user_did, session_token, session_data, last_used_at)
     VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-  `, [sessionToken, user.did, JSON.stringify(session)]);
+  `, [userDid, sessionToken, JSON.stringify(session)]);
 }
 
 export async function getOAuthSession(userDid: string): Promise<NodeSavedSession | undefined> {
@@ -84,8 +76,7 @@ export async function getOAuthSession(userDid: string): Promise<NodeSavedSession
   const row = await db.get(`
     SELECT us.session_data
     FROM user_sessions us
-    JOIN users u ON us.user_did = u.did
-    WHERE u.did = ?
+    WHERE us.user_did = ?
   `, [userDid]) as { session_data: string } | undefined;
 
   return row ? JSON.parse(row.session_data) as NodeSavedSession : undefined;
