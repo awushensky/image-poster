@@ -23,23 +23,23 @@ async function initDatabase() {
 
 export async function setupTables(db: SqliteDatabase) {
   await db.exec(`
-    CREATE TABLE IF NOT EXISTS user_sessions (
-      user_did TEXT PRIMARY KEY,
-      session_token TEXT NOT NULL,
-      session_data TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      last_used_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(session_token)
-    );
-
     CREATE TABLE IF NOT EXISTS users (
       did TEXT PRIMARY KEY,
       handle TEXT NOT NULL,
       display_name TEXT,
       avatar_url TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      last_login DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (did) REFERENCES user_sessions (user_did) ON DELETE CASCADE
+      last_login DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS user_sessions (
+      user_did TEXT PRIMARY KEY,
+      session_token TEXT NOT NULL,
+      session_data TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_used_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_did) REFERENCES user (did) ON DELETE CASCADE,
+      UNIQUE(session_token)
     );
     
     CREATE TABLE IF NOT EXISTS queued_images (
