@@ -1,4 +1,3 @@
-import { useNavigate } from "react-router";
 import ScheduleSummary from "~/components/schedule-summary";
 import type { Route } from "./+types/dashboard";
 import { getUserPostingTimes } from "~/db/posting-time-database.server";
@@ -12,12 +11,13 @@ import Header from "~/components/header";
 import { useState } from "react";
 import Modal from "~/components/modal";
 import ScheduleModalContent from "~/components/schedule-modal-content";
-import type { PostingTime } from "~/model/model";
+import { estimateImagePostingTimes } from "~/lib/posting-time-estimator";
+
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
-  const images = await getImageQueueForUser(user.did);
   const postingTimes = await getUserPostingTimes(user.did);
+  const images = estimateImagePostingTimes(await getImageQueueForUser(user.did), postingTimes);
   
   return { user, images, postingTimes };
 }
@@ -31,35 +31,31 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function Dashboard({ loaderData }: Route.ComponentProps) {
-  const navigate = useNavigate();
-  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const { user, images, postingTimes } = loaderData;
 
   const handleSettingsOpen = () => {
-    setSettingsModalOpen(true);
+    setScheduleModalOpen(true);
   };
 
-  const handleSettingsClose = () => {
-    setSettingsModalOpen(false);
+  const handleScheduleModalClose = () => {
+    setScheduleModalOpen(false);
   };
 
   const handleLogout = () => {
     window.location.href = '/auth/logout';
   }
-
-  const handleSaveSettings = async (newPostingTimes: PostingTime[]) => {
-  }
   
   return (
-    <div className="space-y-6">
-      {settingsModalOpen && (
+    <div className="min-h-screen bg-gray-50">
+      {scheduleModalOpen && (
         <Modal
-          onClose={handleSettingsClose}
-          title="Settings">
+          onClose={handleScheduleModalClose}
+          title="Schedule">
             <ScheduleModalContent
               initialPostingTimes={postingTimes}
-              onSaved={(postingTimes) => { handleSettingsClose() }}
-              onCancel={handleSettingsClose}
+              onSaved={(postingTimes) => { handleScheduleModalClose() }}
+              onCancel={handleScheduleModalClose}
             />
         </Modal>
       )}
@@ -69,17 +65,17 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
         onSettingsClick={handleSettingsOpen}
         onLogoutClick={handleLogout}
       />
-      
-      <ScheduleSummary 
-        schedule={postingTimes}
-        onEdit={() => setSettingsModalOpen(true)}
-      />
 
-      <ImageUpload />
+      <main className={`max-w-7xl mx-auto p-6`}>
+        <ScheduleSummary 
+          schedule={postingTimes}
+          onEdit={() => setScheduleModalOpen(true)}
+        />
 
-      <ImageList images={images}/>
-      
-      {/* Other dashboard content */}
+        <ImageUpload />
+
+        <ImageList images={images}/>
+      </main>
     </div>
   );
 }

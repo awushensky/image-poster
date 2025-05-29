@@ -14,9 +14,8 @@ export interface PostingTime {
 }
 
 export interface QueuedImage {
-  id: number;
-  user_did: number;
   storage_key: string;
+  user_did: number;
   post_text: string;
   is_nsfw: boolean;
   queue_order: number;

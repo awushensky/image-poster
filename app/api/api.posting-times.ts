@@ -1,6 +1,6 @@
+import type { Route } from './+types/api.posting-times';
 import { updateUserPostingTimes } from "~/db/posting-time-database.server";
 import { requireUser } from "~/lib/session.server";
-import type { Route } from '../routes/+types/auth.callback';
 
 export async function action({ request }: Route.ActionArgs) {
   const user = await requireUser(request);

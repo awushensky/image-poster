@@ -89,31 +89,32 @@ export async function getImageQueueForUser(userDid: string): Promise<QueuedImage
 
 export async function reorderImageInQueue(
   userDid: string,
-  sourceOrder: number,
+  sourceImageStorageKey: string,
   destinationOrder: number,
 ): Promise<void> {
-  if (sourceOrder === destinationOrder) return;
-
   const db = await ensureDatabase();
   
   await db.run('BEGIN TRANSACTION');
   
   try {
     const currentImage = await db.get(
-      'SELECT * FROM queued_images WHERE user_did = ? AND queue_order = ?',
-      [userDid, sourceOrder]
+      'SELECT * FROM queued_images WHERE user_did = ? AND storage_key = ?',
+      [userDid, sourceImageStorageKey]
     ) as QueuedImage;
     
     if (!currentImage) {
       throw new Error('Image not found');
     }
 
+    const sourceOrder = currentImage.queue_order;
+    if (sourceOrder === destinationOrder) return;
+
     // Move source image to temporary position -1
     await db.run(`
       UPDATE queued_images
       SET queue_order = -1
-      WHERE user_did = ? AND id = ?
-    `, [userDid, currentImage.id]);
+      WHERE user_did = ? AND storage_key = ?
+    `, [userDid, currentImage.storage_key]);
     
     // Shift all images in the range
     await db.run(`
@@ -131,8 +132,8 @@ export async function reorderImageInQueue(
     await db.run(`
       UPDATE queued_images
       SET queue_order = ?
-      WHERE user_did = ? AND id = ?
-    `, [destinationOrder, userDid, currentImage.id]);
+      WHERE user_did = ? AND storage_key = ?
+    `, [destinationOrder, userDid, currentImage.storage_key]);
     
     await db.run('COMMIT');
   } catch (error) {

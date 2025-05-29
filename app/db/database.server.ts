@@ -43,9 +43,8 @@ export async function setupTables(db: SqliteDatabase) {
     );
     
     CREATE TABLE IF NOT EXISTS queued_images (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      storage_key TEXT PRIMARY KEY,
       user_did TEXT NOT NULL,
-      storage_key TEXT NOT NULL,
       post_text TEXT NOT NULL,
       is_nsfw BOOLEAN DEFAULT TRUE NOT NULL,
       queue_order INTEGER NOT NULL,
