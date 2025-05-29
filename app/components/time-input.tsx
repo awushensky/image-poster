@@ -1,9 +1,6 @@
-import { Clock } from "lucide-react";
-import type { PostingTime } from "./posting-time-selector";
-
 interface TimeInputProps {
-  value: PostingTime;
-  onChange: (time: PostingTime) => void;
+  value: {hour: number, minute: number};
+  onChange: (time: {hour: number, minute: number}) => void;
 }
 
 export default function TimeInput({ value, onChange }: TimeInputProps) {

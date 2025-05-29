@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router";
-import { PostingSummary } from "~/components/posting-summary";
+import ScheduleSummary from "~/components/schedule-summary";
 import type { Route } from "./+types/dashboard";
 import { getUserPostingTimes } from "~/db/posting-time-database.server";
 import { requireUser } from "~/lib/session.server";
@@ -11,8 +11,8 @@ import ImageList from "~/components/image-list";
 import Header from "~/components/header";
 import { useState } from "react";
 import Modal from "~/components/modal";
-import SettingsModalContent from "~/components/settings-modal-content";
-import type { PostingTime } from "~/components/posting-time-selector";
+import ScheduleModalContent from "~/components/schedule-modal-content";
+import type { PostingTime } from "~/model/model";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
@@ -56,9 +56,9 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
         <Modal
           onClose={handleSettingsClose}
           title="Settings">
-            <SettingsModalContent
+            <ScheduleModalContent
               initialPostingTimes={postingTimes}
-              onSave={handleSaveSettings}
+              onSaved={(postingTimes) => { handleSettingsClose() }}
               onCancel={handleSettingsClose}
             />
         </Modal>
@@ -69,14 +69,10 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
         onSettingsClick={handleSettingsOpen}
         onLogoutClick={handleLogout}
       />
-
-      <h1 className="text-2xl font-bold">Dashboard</h1>
       
-      <PostingSummary 
-        times={postingTimes}
-        className="mb-6"
-        showEditButton={true}
-        onEdit={() => navigate('/settings/posting-schedule')}
+      <ScheduleSummary 
+        schedule={postingTimes}
+        onEdit={() => setSettingsModalOpen(true)}
       />
 
       <ImageUpload />

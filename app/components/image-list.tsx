@@ -15,7 +15,7 @@ export default function ImageList({ images }: ImageListProps) {
             {images.map((image) => (
               <li key={image.id} className="border p-4 rounded-lg">
                 <img
-                  src={`/image/${image.storage_key}`}
+                  src={`/api/image/${image.storage_key}`}
                   width="20%"
                   alt={image.storage_key}
                   className="w-lg h-auto rounded"

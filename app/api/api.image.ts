@@ -1,5 +1,5 @@
 import { fileStorage } from "~/lib/image-storage.server";
-import type { Route } from "./+types/image";
+import type { Route } from "../routes/+types/image";
 import { requireUser } from "~/lib/session.server";
 import { getImageQueueForUser } from "~/db/image-queue-database.server";
 
