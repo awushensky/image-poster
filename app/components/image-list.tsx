@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
-import { GripVertical, Calendar, AlertTriangle } from 'lucide-react';
+import { GripVertical, Calendar, AlertTriangle, Trash2 } from 'lucide-react';
 import type { ImageWithEstimatedUpload } from '~/lib/posting-time-estimator';
 import { useFetcher } from 'react-router';
-
 
 interface ImageListComponentProps {
   images: ImageWithEstimatedUpload[];
   onImagesReordered?: (storageKey: string, destinationOrder: number) => void;
   onImageUpdate?: (image: number, update: Partial<{ postText: string, isNsfw: boolean }>) => void;
+  onImageDelete?: (storageKey: string) => void;
 }
 
 const ImageListComponent = ({ 
   images = [],
   onImagesReordered,
-  onImageUpdate
+  onImageUpdate,
+  onImageDelete
 }: ImageListComponentProps) => {
   const fetcher = useFetcher();
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -66,6 +67,12 @@ const ImageListComponent = ({
     onImageUpdate?.(index, { isNsfw });
   };
 
+  const handleDelete = (storageKey: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    fetcher.submit({}, { method: 'DELETE', action: `/api/image/${storageKey}` });
+    onImageDelete?.(storageKey);
+  };
+
   const formatEstimatedTime = (timestamp?: Date) => {
     if (!timestamp) return 'Not scheduled';
     
@@ -99,7 +106,6 @@ const ImageListComponent = ({
             `}
           >
             <div className="flex items-center gap-4">
-              {/* Image thumbnail */}
               <div className="flex-shrink-0">
                 <img
                   src={`/api/image/${image.storage_key}`}
@@ -108,9 +114,7 @@ const ImageListComponent = ({
                 />
               </div>
 
-              {/* Content area */}
               <div className="flex-1 space-y-3">
-                {/* Post text field */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Post Text
@@ -124,7 +128,6 @@ const ImageListComponent = ({
                   />
                 </div>
 
-                {/* NSFW checkbox and estimated time */}
                 <div className="flex items-center justify-between">
                   <label className="flex items-center space-x-2 cursor-pointer">
                     <input
@@ -146,9 +149,19 @@ const ImageListComponent = ({
                 </div>
               </div>
 
-              {/* Drag handle */}
-              <div className="flex-shrink-0 p-2 cursor-grab active:cursor-grabbing">
-                <GripVertical className="w-6 h-6 text-gray-400 hover:text-gray-600" />
+              <div className="flex-shrink-0 flex items-center gap-2">
+                <button
+                  onClick={(e) => handleDelete(image.storage_key, e)}
+                  className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
+                  title="Delete image"
+                  type="button"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+
+                <div className="p-2 cursor-grab active:cursor-grabbing">
+                  <GripVertical className="w-6 h-6 text-gray-400 hover:text-gray-600" />
+                </div>
               </div>
             </div>
           </div>

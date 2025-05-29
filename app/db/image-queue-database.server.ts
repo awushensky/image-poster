@@ -109,24 +109,35 @@ export async function reorderImageInQueue(
     const sourceOrder = currentImage.queue_order;
     if (sourceOrder === destinationOrder) return;
 
-    // Move source image to temporary position -1
+    // Move source image to temporary position
+    const tempOrder = Date.now() * -1;
     await db.run(`
       UPDATE queued_images
-      SET queue_order = -1
+      SET queue_order = ?
       WHERE user_did = ? AND storage_key = ?
-    `, [userDid, currentImage.storage_key]);
+    `, [tempOrder, userDid, currentImage.storage_key]);
     
-    // Shift all images in the range
-    await db.run(`
-      UPDATE queued_images
-      SET queue_order = queue_order + ?
-      WHERE user_did = ? AND queue_order BETWEEN ? AND ?
-    `, [
-      destinationOrder < sourceOrder ? 1 : -1, 
-      userDid, 
-      Math.min(sourceOrder, destinationOrder), 
-      Math.max(sourceOrder, destinationOrder)
-    ]);
+    if (destinationOrder < sourceOrder) {
+      // Moving left: shift from sourceOrder-1 down to destinationOrder (shift right)
+      // Process from highest to lowest to avoid conflicts
+      for (let pos = sourceOrder - 1; pos >= destinationOrder; pos--) {
+        await db.run(`
+          UPDATE queued_images
+          SET queue_order = queue_order + 1
+          WHERE user_did = ? AND queue_order = ?
+        `, [userDid, pos]);
+      }
+    } else {
+      // Moving right: shift from sourceOrder+1 up to destinationOrder (shift left)  
+      // Process from lowest to highest to avoid conflicts
+      for (let pos = sourceOrder + 1; pos <= destinationOrder; pos++) {
+        await db.run(`
+          UPDATE queued_images
+          SET queue_order = queue_order - 1
+          WHERE user_did = ? AND queue_order = ?
+        `, [userDid, pos]);
+      }
+    }
     
     // Move source image to final destination
     await db.run(`
@@ -142,15 +153,15 @@ export async function reorderImageInQueue(
   }
 }
 
-export async function deleteFromImageQueue(userDid: string, imageId: number): Promise<void> {
+export async function deleteFromImageQueue(userDid: string, storageKey: string): Promise<void> {
   const db = await ensureDatabase();
   
   await db.run('BEGIN TRANSACTION');
   
   try {
     const imageToDelete = await db.get(
-      'SELECT * FROM queued_images WHERE user_did = ? AND id = ?',
-      [userDid, imageId]
+      'SELECT * FROM queued_images WHERE user_did = ? AND storage_key = ?',
+      [userDid, storageKey]
     ) as QueuedImage;
     
     if (!imageToDelete) {
@@ -158,8 +169,8 @@ export async function deleteFromImageQueue(userDid: string, imageId: number): Pr
     }
     
     await db.run(
-      'DELETE FROM queued_images WHERE user_did = ? AND id = ?',
-      [userDid, imageId]
+      'DELETE FROM queued_images WHERE user_did = ? AND storage_key = ?',
+      [userDid, storageKey]
     );
     
     // Reorder remaining images to fill the gap

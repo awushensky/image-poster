@@ -1,7 +1,7 @@
 import { fileStorage } from "~/lib/image-storage.server";
 import type { Route } from "./+types/api.image";
 import { requireUser } from "~/lib/session.server";
-import { getImageQueueForUser, readImageQueueEntry, reorderImageInQueue } from "~/db/image-queue-database.server";
+import { deleteFromImageQueue, getImageQueueForUser, readImageQueueEntry, reorderImageInQueue } from "~/db/image-queue-database.server";
 import type { QueuedImage, User } from "~/model/model";
 
 
@@ -69,6 +69,10 @@ async function deleteImage(user: User, storageKey: string): Promise<void> {
     throw new Response("Image not found", { status: 404 });
   }
 
+  // TODO: if the file storage removal fails, we might have a hanging file with no reference.
+  // Eventually, we should regularly clean up the files with no references in the image-queue
+  // database.
+  await deleteFromImageQueue(user.did, storageKey);
   await fileStorage.remove(storageKey);
 }
 
