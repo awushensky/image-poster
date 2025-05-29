@@ -18,7 +18,6 @@ export async function createImageQueueEntry(
     ) as { max_order: number | null };
     const nextOrder = (result.max_order || 0) + 1;
     
-    // Fixed: use storage_key consistently (matching table schema)
     await db.run(`
       INSERT INTO queued_images (user_did, storage_key, post_text, queue_order)
       VALUES (?, ?, ?, ?)
@@ -35,7 +34,6 @@ export async function createImageQueueEntry(
 
 export async function readImageQueueEntry(userDid: string, storageKey: string): Promise<QueuedImage> {
   const db = await ensureDatabase();
-  // Fixed: use storage_key consistently
   const image = await db.get(
     'SELECT * FROM queued_images WHERE user_did = ? AND storage_key = ?',
     [userDid, storageKey]
