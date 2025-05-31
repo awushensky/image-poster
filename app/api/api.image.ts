@@ -1,7 +1,7 @@
 import { fileStorage } from "~/lib/image-storage.server";
 import type { Route } from "./+types/api.image";
 import { requireUser } from "~/lib/session.server";
-import { deleteFromImageQueue, getImageQueueForUser, readImageQueueEntry, reorderImageInQueue } from "~/db/image-queue-database.server";
+import { deleteFromImageQueue, getImageQueueForUser, readImageQueueEntry, reorderImageInQueue, updateImageQueueEntry } from "~/db/image-queue-database.server";
 import type { QueuedImage, User } from "~/model/model";
 
 
@@ -60,6 +60,15 @@ async function updateImage(user: User, storageKey: string, update: FormData): Pr
 
       await reorderImageInQueue(user.did, storageKey, toOrder);
       return;
+    case 'update':
+      const postText = update.get("postText")?.toString();
+      const isNsfwStr = update.get("isNsfw")?.toString()?.toLowerCase();
+      const isNsfw = isNsfwStr === undefined ? undefined : isNsfwStr === "true"
+
+      await updateImageQueueEntry(user.did, storageKey, { post_text: postText, is_nsfw: isNsfw });
+      return;
+    default:
+      throw new Response(`Invalid image update action ${action}`, { status: 400 });
   }
 }
 

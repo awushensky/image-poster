@@ -12,6 +12,7 @@ import { useState } from "react";
 import Modal from "~/components/modal";
 import ScheduleModalContent from "~/components/schedule-modal-content";
 import { estimateImagePostingTimes } from "~/lib/posting-time-estimator";
+import { useFetcher } from "react-router";
 
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -31,7 +32,9 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function Dashboard({ loaderData }: Route.ComponentProps) {
+  const fetcher = useFetcher();
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [isLoading, setLoading] = useState(false);
   const { user, images, postingTimes } = loaderData;
 
   const handleSettingsOpen = () => {
@@ -41,6 +44,36 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
   const handleScheduleModalClose = () => {
     setScheduleModalOpen(false);
   };
+
+  const handleImagesReordered = async (storageKey: string, destinationOrder: number) => {
+    setLoading(true);
+    await fetcher.submit(
+      {
+        action: 'reorder',
+        toOrder: destinationOrder,
+      },
+      { method: 'PUT', action: `/api/image/${storageKey}` }
+    );
+    setLoading(false);
+  }
+
+  const handleImageUpdated = async (storageKey: string, update: Partial<{ postText: string, isNsfw: boolean }>) => {
+    setLoading(true);
+    await fetcher.submit(
+      {
+        action: 'update',
+        ...update
+      },
+      { method: 'PUT', action: `/api/image/${storageKey}` }
+    );
+    setLoading(false);
+  }
+
+  const handleImageDelete = async (storageKey: string) => {
+    setLoading(true);
+    await fetcher.submit({}, { method: 'DELETE', action: `/api/image/${storageKey}` });
+    setLoading(false);
+  }
 
   const handleLogout = () => {
     window.location.href = '/auth/logout';
@@ -74,7 +107,13 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
 
         <ImageUpload />
 
-        <ImageList images={images}/>
+        <ImageList
+          images={images}
+          isLoading={isLoading}
+          onImagesReordered={handleImagesReordered}
+          onImageUpdate={handleImageUpdated}
+          onImageDelete={handleImageDelete}
+        />
       </main>
     </div>
   );

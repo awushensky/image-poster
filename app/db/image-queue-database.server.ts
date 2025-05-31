@@ -48,7 +48,7 @@ export async function readImageQueueEntry(userDid: string, storageKey: string): 
 
 export async function updateImageQueueEntry(
   userDid: string,
-  imageId: number,
+  storageKey: string,
   updates: Partial<Pick<QueuedImage, 'post_text' | 'is_nsfw'>>
 ): Promise<void> {
   const db = await ensureDatabase();
@@ -68,12 +68,12 @@ export async function updateImageQueueEntry(
   
   if (setParts.length === 0) return;
   
-  values.push(userDid, imageId);
+  values.push(userDid, storageKey);
   
   await db.run(`
     UPDATE queued_images 
     SET ${setParts.join(', ')} 
-    WHERE user_did = ? AND id = ?
+    WHERE user_did = ? AND storage_key = ?
   `, values);
 }
 
