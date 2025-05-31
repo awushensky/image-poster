@@ -15,10 +15,16 @@ export interface PostingTime {
 
 export interface QueuedImage {
   storage_key: string;
-  user_did: number;
+  user_did: string;
   post_text: string;
   is_nsfw: boolean;
   queue_order: number;
+  created_at: string;
+}
+
+export interface PostedImage {
+  storage_key: string;
+  user_did: string;
   created_at: string;
 }
 

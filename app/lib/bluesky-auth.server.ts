@@ -176,35 +176,43 @@ export async function restoreUserSession(userDid: string): Promise<Agent> {
 export async function postImageToBluesky(
   userDid: string,
   imageBuffer: Buffer,
-  altText: string = ''
+  postText: string,
+  isNSFW: boolean = true,
+  altText: string = '',
 ) {
-  try {
-    const agent = await restoreUserSession(userDid);
+  const agent = await restoreUserSession(userDid);
 
-    const uploadResult = await agent.uploadBlob(imageBuffer, {
-      encoding: 'image/jpeg'
-    });
+  const uploadResult = await agent.uploadBlob(imageBuffer, {
+    encoding: 'image/jpeg'
+  });
 
-    if (!uploadResult.success) {
-      throw new Error('Failed to upload image to Bluesky');
-    }
-
-    const postResult = await agent.post({
-      text: '',
-      embed: {
-        $type: 'app.bsky.embed.images',
-        images: [{
-          alt: altText,
-          image: uploadResult.data.blob
-        }]
-      }
-    });
-
-    return postResult;
-  } catch (error) {
-    console.error('Failed to post image to Bluesky:', error);
-    throw error;
+  if (!uploadResult.success) {
+    throw new Error('Failed to upload image to Bluesky');
   }
+
+  const postData: any = {
+    text: postText,
+    embed: {
+      $type: 'app.bsky.embed.images',
+      images: [{
+        alt: altText,
+        image: uploadResult.data.blob
+      }]
+    }
+  };
+
+  if (isNSFW) {
+    postData.labels = {
+      $type: 'com.atproto.label.defs#selfLabels',
+      values: [{
+        val: 'porn'
+      }]
+    };
+  }
+
+  const postResult = await agent.post(postData);
+
+  return postResult;
 }
 
 export async function getOAuthClient() {

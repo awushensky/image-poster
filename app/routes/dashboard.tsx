@@ -6,7 +6,7 @@ import ImageUpload from "~/components/image-upload";
 import uploadHandler from "~/lib/upload-handler.server";
 import { parseFormData } from "@mjackson/form-data-parser";
 import { getImageQueueForUser } from "~/db/image-queue-database.server";
-import ImageList from "~/components/image-list";
+import ImageQueue from "~/components/image-queue";
 import Header from "~/components/header";
 import { useState } from "react";
 import Modal from "~/components/modal";
@@ -107,7 +107,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
 
         <ImageUpload />
 
-        <ImageList
+        <ImageQueue
           images={images}
           isLoading={isLoading}
           onImagesReordered={handleImagesReordered}

@@ -5,7 +5,7 @@ import ImageCard from './image-card';
 import Modal from './modal';
 import EditPostModalContent from './edit-post-modal-content';
 
-interface ImageListComponentProps {
+interface ImageQueueProps {
   images: ImageWithEstimatedUpload[];
   isLoading: boolean,
   onImagesReordered: (storageKey: string, destinationOrder: number) => Promise<void>;
@@ -13,13 +13,13 @@ interface ImageListComponentProps {
   onImageDelete: (storageKey: string) => Promise<void>;
 }
 
-const ImageListComponent = ({ 
+const ImageQueue = ({
   images = [],
   isLoading,
   onImagesReordered,
   onImageUpdate,
   onImageDelete
-}: ImageListComponentProps) => {
+}: ImageQueueProps) => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [editingImageKey, setEditingImageKey] = useState<string | null>(null);
@@ -54,7 +54,7 @@ const ImageListComponent = ({
       setDragOverIndex(null);
       return;
     }
-    
+
     const draggedImage = sortedImages[draggedIndex];
     const droppedImage = sortedImages[droppedIndex];
 
@@ -82,11 +82,11 @@ const ImageListComponent = ({
 
   const handleEditSave = async (data: { text: string; isNsfw: boolean }) => {
     if (isLoading || !editingImageKey) return;
-    
+
     try {
-      await onImageUpdate?.(editingImageKey, { 
-        postText: data.text, 
-        isNsfw: data.isNsfw 
+      await onImageUpdate?.(editingImageKey, {
+        postText: data.text,
+        isNsfw: data.isNsfw
       });
       setEditingImageKey(null);
     } catch (error) {
@@ -119,9 +119,9 @@ const ImageListComponent = ({
       {isLoading && (
         <div className="absolute inset-0 bg-white bg-opacity-75 backdrop-blur-sm flex items-center justify-center z-50 rounded-lg">
           <div className="bg-white p-6 rounded-lg shadow-lg flex flex-col items-center gap-3">
-            <img 
+            <img
               src="/images/loading.png"
-              alt="Loading..." 
+              alt="Loading..."
               className="w-sm h-sm"
             />
             <p className="text-gray-600 font-medium">Processing...</p>
@@ -173,4 +173,4 @@ const ImageListComponent = ({
   );
 };
 
-export default ImageListComponent;
+export default ImageQueue;

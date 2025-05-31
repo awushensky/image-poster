@@ -52,6 +52,13 @@ export async function setupTables(db: SqliteDatabase) {
       FOREIGN KEY (user_did) REFERENCES users (did) ON DELETE CASCADE,
       UNIQUE(user_did, queue_order)
     );
+
+    CREATE TABLE IF NOT EXISTS posted_images (
+      storage_key TEXT PRIMARY KEY,
+      user_did TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_did) REFERENCES users (did) ON DELETE CASCADE
+    );
     
     CREATE TABLE IF NOT EXISTS posting_times (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
