@@ -16,15 +16,10 @@ export default function ScheduleModalContent({
 }: SettingsModalContentProps) {
   const [postingTimes, setPostingTimes] = useState<PostingTime[]>(initialPostingTimes);
   const [isSaving, setIsSaving] = useState(false);
-  const fetcher = useFetcher();
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      fetcher.submit(
-        { values: JSON.stringify(postingTimes) },
-        { method: "POST", action: "/api/posting-times" }
-      );
       onSaved(postingTimes);
     } catch (error) {
       console.error('Failed to save settings:', error);

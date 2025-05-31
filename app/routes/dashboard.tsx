@@ -13,11 +13,13 @@ import Modal from "~/components/modal";
 import ScheduleModalContent from "~/components/schedule-modal-content";
 import { estimateImagePostingTimes } from "~/lib/posting-time-estimator";
 import { useFetcher } from "react-router";
+import type { PostingTime } from "~/model/model";
+import { convertPostingTimesToLocal, convertPostingTimesToUTC, getUserTimezone } from "~/lib/posting-time-zone-converter";
 
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
-  const postingTimes = await getUserPostingTimes(user.did);
+  const postingTimes = convertPostingTimesToLocal(await getUserPostingTimes(user.did), getUserTimezone());
   const images = estimateImagePostingTimes(await getImageQueueForUser(user.did), postingTimes);
   
   return { user, images, postingTimes };
@@ -44,6 +46,14 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
   const handleScheduleModalClose = () => {
     setScheduleModalOpen(false);
   };
+
+  const handleScheduleModalSave = async (postingTimes: PostingTime[]) => {
+    fetcher.submit(
+      { values: JSON.stringify(convertPostingTimesToUTC(postingTimes, getUserTimezone())) },
+      { method: "POST", action: "/api/posting-times" }
+    );
+    setScheduleModalOpen(false);
+  }
 
   const handleImagesReordered = async (storageKey: string, destinationOrder: number) => {
     setLoading(true);
@@ -87,7 +97,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
           title="Schedule">
             <ScheduleModalContent
               initialPostingTimes={postingTimes}
-              onSaved={(postingTimes) => { handleScheduleModalClose() }}
+              onSaved={handleScheduleModalSave}
               onCancel={handleScheduleModalClose}
             />
         </Modal>

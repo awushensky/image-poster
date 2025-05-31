@@ -32,9 +32,9 @@ class ImageUploadScheduler {
 
   private async checkAndProcessScheduledPosts() {
     const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentDayOfWeek = now.getDay();
+    const currentHour = now.getUTCHours();
+    const currentMinute = now.getUTCMinutes();
+    const currentDayOfWeek = now.getUTCDay();
 
     const users = await getUsersWithPostingDueAt(currentHour, currentMinute, currentDayOfWeek);
     if (users.length === 0) {
