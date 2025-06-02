@@ -31,21 +31,21 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
   const colorClasses = {
-    blue: 'bg-cyan-400 text-white',
-    green: 'bg-amber-400 text-white', 
-    purple: 'bg-purple-400 text-white',
-    orange: 'bg-orange-400 text-white',
-    red: 'bg-red-400 text-white',
-    indigo: 'bg-indigo-400 text-white'
+    blue: 'bg-blue-300 border-blue-400 text-white',
+    green: 'bg-green-300 border-green-400 text-white', 
+    purple: 'bg-purple-300 border-purple-400 text-white',
+    orange: 'bg-orange-300 border-orange-400 text-white',
+    red: 'bg-red-300 border-red-400 text-white',
+    indigo: 'bg-indigo-300 border-indigo-400 text-white'
   };
   
   const disabledColorClasses = {
-    blue: 'bg-blue-50 border-blue-200 text-blue-400',
-    green: 'bg-green-50 border-green-200 text-green-400', 
-    purple: 'bg-purple-50 border-purple-200 text-purple-400',
-    orange: 'bg-orange-50 border-orange-200 text-orange-400',
-    red: 'bg-red-50 border-red-200 text-red-400',
-    indigo: 'bg-indigo-50 border-indigo-200 text-indigo-400'
+    blue: 'bg-gray-50 border-gray-100 text-gray-300',
+    green: 'bg-gray-50 border-gray-100 text-gray-300', 
+    purple: 'bg-gray-50 border-gray-100 text-gray-300',
+    orange: 'bg-gray-50 border-gray-100 text-gray-300',
+    red: 'bg-gray-50 border-gray-100 text-gray-300',
+    indigo: 'bg-gray-50 border-gray-100 text-gray-300'
   };
 
   const getRandomColor = (): CronSchedule['color'] => {
