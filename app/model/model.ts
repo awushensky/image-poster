@@ -1,6 +1,7 @@
 export interface User {
   did: string;
   handle: string;
+  timezone: string;
   display_name?: string;
   avatar_url?: string;
   created_at: string;
@@ -12,6 +13,18 @@ export interface PostingTime {
   minute: number;
   day_of_week: number;
 }
+
+export interface CronSchedule {
+  id: number;
+  user_did: string;
+  cron_expression: string;
+  color: 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'indigo';
+  active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface ProposedCronSchedule extends Omit<CronSchedule, 'id' | 'user_did' | 'created_at' | 'updated_at'> {}
 
 export interface QueuedImage {
   storage_key: string;

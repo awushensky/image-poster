@@ -28,6 +28,7 @@ export async function setupTables(db: SqliteDatabase) {
       handle TEXT NOT NULL,
       display_name TEXT,
       avatar_url TEXT,
+      timezone TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       last_login DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -57,6 +58,17 @@ export async function setupTables(db: SqliteDatabase) {
       storage_key TEXT PRIMARY KEY,
       user_did TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_did) REFERENCES users (did) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS posting_schedules (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_did TEXT NOT NULL,
+      cron_expression TEXT NOT NULL,
+      color TEXT NOT NULL CHECK (color IN ('blue', 'green', 'purple', 'orange', 'red', 'indigo')),
+      active BOOLEAN DEFAULT TRUE NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_did) REFERENCES users (did) ON DELETE CASCADE
     );
     

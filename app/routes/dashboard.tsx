@@ -1,28 +1,29 @@
-import ScheduleSummary from "~/components/schedule-summary";
+import ScheduleSummary from "~/components/scheduling/schedule-summary";
 import type { Route } from "./+types/dashboard";
-import { getUserPostingTimes } from "~/db/posting-time-database.server";
 import { requireUser } from "~/lib/session.server";
 import ImageUpload from "~/components/image-upload";
 import uploadHandler from "~/lib/upload-handler.server";
 import { parseFormData } from "@mjackson/form-data-parser";
 import { getImageQueueForUser } from "~/db/image-queue-database.server";
-import ImageQueue from "~/components/image-queue";
+import ImageQueue from "~/components/image-queue/image-queue";
 import Header from "~/components/header";
 import { useState } from "react";
 import Modal from "~/components/modal";
-import ScheduleModalContent from "~/components/schedule-modal-content";
-import { estimateImagePostingTimes } from "~/lib/posting-time-estimator";
+import { estimateImageSchedule } from "~/lib/posting-time-estimator";
 import { useFetcher } from "react-router";
-import type { PostingTime } from "~/model/model";
-import { convertPostingTimesToLocal, convertPostingTimesToUTC, getUserTimezone } from "~/lib/posting-time-zone-converter";
+import type { PostingTime, ProposedCronSchedule } from "~/model/model";
+import { convertPostingTimesToUTC } from "~/lib/posting-time-zone-converter";
+import ScheduleEditor from "~/components/scheduling/schedule-editor";
+import { getUserPostingSchedules } from "~/db/posting-schedule-database.server";
 
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
-  const postingTimes = convertPostingTimesToLocal(await getUserPostingTimes(user.did), getUserTimezone());
-  const images = estimateImagePostingTimes(await getImageQueueForUser(user.did), postingTimes);
+  const schedules = await getUserPostingSchedules(user.did);
+  const images = await estimateImageSchedule(await getImageQueueForUser(user.did), schedules);
+  // const images = estimateImagePostingTimes(await getImageQueueForUser(user.did), postingTimes);
   
-  return { user, images, postingTimes };
+  return { user, schedules, images };
 }
 
 export async function action({ request }: Route.ActionArgs) {
@@ -37,7 +38,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
   const fetcher = useFetcher();
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [isLoading, setLoading] = useState(false);
-  const { user, images, postingTimes } = loaderData;
+  const { user, schedules, images } = loaderData;
 
   const handleSettingsOpen = () => {
     setScheduleModalOpen(true);
@@ -47,9 +48,45 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
     setScheduleModalOpen(false);
   };
 
+  const handleAddSchedule = async (schedule: ProposedCronSchedule) => {
+    setLoading(true);
+    await fetcher.submit(
+      { schedule: JSON.stringify(schedule) },
+      { method: 'POST', action: '/api/posting-schedules' }
+    );
+    setLoading(false);
+  }
+
+  const handleToggleSchedule = async (scheduleId: number, active: boolean) => {
+    setLoading(true);
+    await fetcher.submit(
+      { update: JSON.stringify({ active }) },
+      { method: 'PUT', action: `/api/posting-schedules/${scheduleId}` }
+    );
+    setLoading(false);
+  }
+
+  const handleDeleteSchedule = async (scheduleId: number) => {
+    setLoading(true);
+    await fetcher.submit(
+      { scheduleId: scheduleId.toString() },
+      { method: 'DELETE', action: `/api/posting-schedules/${scheduleId}` }
+    );
+    setLoading(false);
+  }
+
+  const setUserTimezone = async (timezone: string) => {
+    setLoading(true);
+    await fetcher.submit(
+      { timezone },
+      { method: 'PUT', action: '/api/user/timezone' }
+    );
+    setLoading(false);
+  }
+
   const handleScheduleModalSave = async (postingTimes: PostingTime[]) => {
     fetcher.submit(
-      { values: JSON.stringify(convertPostingTimesToUTC(postingTimes, getUserTimezone())) },
+      { values: JSON.stringify(convertPostingTimesToUTC(postingTimes, user.timezone)) },
       { method: "POST", action: "/api/posting-times" }
     );
     setScheduleModalOpen(false);
@@ -95,10 +132,18 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
         <Modal
           onClose={handleScheduleModalClose}
           title="Schedule">
-            <ScheduleModalContent
+            {/* <ScheduleModalContent
               initialPostingTimes={postingTimes}
               onSaved={handleScheduleModalSave}
               onCancel={handleScheduleModalClose}
+            /> */}
+            <ScheduleEditor
+              user={user}
+              schedules={schedules}
+              onAddSchedule={handleAddSchedule}
+              onToggleSchedule={handleToggleSchedule}
+              onDeleteSchedule={handleDeleteSchedule}
+              onTimezoneChange={setUserTimezone}
             />
         </Modal>
       )}
@@ -111,7 +156,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
 
       <main className={`max-w-7xl mx-auto p-6`}>
         <ScheduleSummary 
-          schedule={postingTimes}
+          schedule={[]}
           onEdit={() => setScheduleModalOpen(true)}
         />
 

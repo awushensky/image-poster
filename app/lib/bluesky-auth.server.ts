@@ -8,6 +8,7 @@ import {
   storeOAuthSession,
 } from '~/db/user-session-database.server';
 import { Mutex } from 'async-mutex';
+import { getUserTimezone } from './time-utils';
 
 
 let oauthClient: NodeOAuthClient;
@@ -159,7 +160,13 @@ export async function handleAuthCallback(params: URLSearchParams) {
     throw new Error('Failed to get user profile');
   }
 
-  const user = await createOrUpdateUser(profile.data.did, profile.data.handle, profile.data.displayName, profile.data.avatar);
+  const user = await createOrUpdateUser(
+    profile.data.did,
+    profile.data.handle,
+    getUserTimezone(),
+    profile.data.displayName,
+    profile.data.avatar,
+  );
   return { user, state };
 }
 

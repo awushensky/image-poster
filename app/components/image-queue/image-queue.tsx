@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { GripVertical } from 'lucide-react';
 import type { ImageWithEstimatedUpload } from '~/lib/posting-time-estimator';
 import ImageCard from './image-card';
-import Modal from './modal';
+import Modal from '../modal';
 import EditPostModalContent from './edit-post-modal-content';
 
 interface ImageQueueProps {
