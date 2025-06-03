@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { Clock, Plus, Pause, X, Globe, Play } from 'lucide-react';
 import type { CronSchedule, ProposedCronSchedule, User } from '~/model/model';
-import { cronToDescription, getNextExecutions, timeToCron } from '~/lib/cron-utils';
-import { commonTimezones } from '~/lib/time-utils';
+import { cronToDays, cronToDescription, getNextExecutions, getNextExecutionsForMultipleSchedules, timeToCron } from '~/lib/cron-utils';
+import { commonTimezones, dayNames } from '~/lib/time-utils';
+import { DaysOfWeekInput } from './days-of-week-input';
+import { TimeInput } from './time-input';
 
 
 interface ScheduleEditorProps {
   user: User;
-  schedules: CronSchedule[];
+  schedules: ProposedCronSchedule[];
   onAddSchedule: (scheduleToAdd: ProposedCronSchedule) => void;
-  onToggleSchedule: (id: number, active: boolean) => void;
-  onDeleteSchedule: (id: number) => void;
+  onToggleSchedule: (index: number, active: boolean) => void;
+  onDeleteSchedule: (index: number) => void;
   onTimezoneChange: (timezone: string) => void;
 }
 
@@ -20,33 +22,31 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
   onAddSchedule,
   onToggleSchedule,
   onDeleteSchedule,
-  onTimezoneChange
+  onTimezoneChange,
 }) => {
-  const [selectedHour, setSelectedHour] = useState(9);
-  const [selectedMinute, setSelectedMinute] = useState(0);
-  const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]); // Monday-Friday
+  const [selectedTime, setSelectedTime] = useState<{ hour: number; minute: number }>({ hour: 9, minute: 0 });
+  const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [showTimezoneSelector, setShowTimezoneSelector] = useState(false);
 
-  const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  function getCardColor(color: CronSchedule['color'], active: boolean): string {
+    return active ? `bg-${color}-50 border-${color}-200` : `bg-gray-50 border-gray-200`;
+  }
 
-  const colorClasses = {
-    blue: 'bg-blue-300 border-blue-400 text-white',
-    green: 'bg-green-300 border-green-400 text-white', 
-    purple: 'bg-purple-300 border-purple-400 text-white',
-    orange: 'bg-orange-300 border-orange-400 text-white',
-    red: 'bg-red-300 border-red-400 text-white',
-    indigo: 'bg-indigo-300 border-indigo-400 text-white'
-  };
-  
-  const disabledColorClasses = {
-    blue: 'bg-gray-50 border-gray-100 text-gray-300',
-    green: 'bg-gray-50 border-gray-100 text-gray-300', 
-    purple: 'bg-gray-50 border-gray-100 text-gray-300',
-    orange: 'bg-gray-50 border-gray-100 text-gray-300',
-    red: 'bg-gray-50 border-gray-100 text-gray-300',
-    indigo: 'bg-gray-50 border-gray-100 text-gray-300'
-  };
+  function getLargeTextColor(color: CronSchedule['color'], active: boolean): string {
+    return active ? `text-${color}-900` : 'text-gray-400';
+  }
+
+  function getSmallTextColor(color: CronSchedule['color'], active: boolean): string {
+    return active ? `text-${color}-600` : 'text-gray-400';
+  }
+
+  function getPauseButtonColor(color: CronSchedule['color'], active: boolean): string {
+    return active ? `text-${color}-600 hover:text-gray-600` : `text-gray-400 hover:text-${color}-900`;
+  }
+
+  function getCloseButtonColor(color: CronSchedule['color'], active: boolean): string {
+    return active ? `text-${color}-600 hover:text-red-600` : `text-gray-400 hover:text-red-600`;
+  }
 
   const getRandomColor = (): CronSchedule['color'] => {
     const colors: CronSchedule['color'][] = ['blue', 'green', 'purple', 'orange', 'red', 'indigo'];
@@ -64,7 +64,7 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
   const handleAddSchedule = () => {
     if (selectedDays.length === 0) return;
 
-    const cronExpression = timeToCron(selectedHour, selectedMinute, selectedDays);
+    const cronExpression = timeToCron(selectedTime.hour, selectedTime.minute, selectedDays);
 
     onAddSchedule({
       cron_expression: cronExpression,
@@ -74,9 +74,7 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
   };
 
   const activeSchedules = schedules.filter(s => s.active);
-  const nextExecutions = activeSchedules.length > 0 
-    ? getNextExecutions(activeSchedules[0].cron_expression, user.timezone, 3)
-    : [];
+  const nextExecutions = getNextExecutionsForMultipleSchedules(activeSchedules.map(s => s.cron_expression), user.timezone, 3) || [];
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
@@ -126,48 +124,15 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
       {/* Add Schedule Section */}
       <div className="bg-gray-50 rounded-lg p-4 mb-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
-            <div className="grid grid-cols-2 gap-2">
-              <select 
-                value={selectedHour}
-                onChange={(e) => setSelectedHour(parseInt(e.target.value))}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm"
-              >
-                {Array.from({length: 24}, (_, i) => (
-                  <option key={i} value={i}>{i.toString().padStart(2, '0')}</option>
-                ))}
-              </select>
-              <select 
-                value={selectedMinute}
-                onChange={(e) => setSelectedMinute(parseInt(e.target.value))}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm"
-              >
-                {[0, 15, 30, 45].map(minute => (
-                  <option key={minute} value={minute}>{minute.toString().padStart(2, '0')}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Days</label>
-            <div className="flex gap-1">
-              {dayLabels.map((label, index) => (
-                <button
-                  key={index}
-                  onClick={() => toggleDay(index)}
-                  title={dayNames[index]}
-                  className={`w-8 h-8 rounded border text-xs transition-colors ${
-                    selectedDays.includes(index)
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'border-gray-300 hover:bg-blue-50'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <TimeInput
+            value={selectedTime}
+            onChange={setSelectedTime}
+          />
+          <DaysOfWeekInput
+            title="Days"
+            selectedDays={selectedDays}
+            onChange={setSelectedDays}
+          />
           <div className="flex items-end">
             <button 
               onClick={handleAddSchedule}
@@ -181,10 +146,10 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
         </div>
       </div>
 
-      {/* Active Schedules */}
+      {/* Schedules */}
       <div className="space-y-3">
         <h3 className="text-lg font-medium text-gray-900">
-          Active Schedules ({schedules.length})
+          Schedules ({schedules.length})
         </h3>
         
         {schedules.length === 0 ? (
@@ -192,52 +157,40 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
             No schedules created yet. Add your first schedule above.
           </div>
         ) : (
-          schedules.map((schedule) => (
+          schedules.map((schedule, index) => (
             <div
-              key={schedule.id}
-              className={`border rounded-lg p-4 ${schedule.active ? colorClasses[schedule.color] : disabledColorClasses[schedule.color]}`}
+              key={index}
+              className={`border rounded-lg p-4 ${getCardColor(schedule.color, schedule.active)}`}
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="font-medium">{cronToDescription(schedule.cron_expression)}</span>
-                  <p className="text-sm mt-1 opacity-75">
-                    Cron: {schedule.cron_expression}
+                  <span className={`font-medium ${getLargeTextColor(schedule.color, schedule.active)}`}>
+                    {cronToDescription(schedule.cron_expression)}
+                  </span>
+                  <p className={`text-sm mt-1 ${getSmallTextColor(schedule.color, schedule.active)}`}>
+                    {cronToDays(schedule.cron_expression).map(day => dayNames[day]).join(', ')}
                   </p>
                 </div>
-                <div className="flex flex-col">
-                  { schedule.active &&
-                    <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      <div className="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></div>
-                      Active
-                    </div>
-                  }
-                  { !schedule.active &&
-                    <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-500 text-white">
-                      <div className="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></div>
-                      Paused
-                    </div>
-                  }
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => onToggleSchedule(schedule.id, !schedule.active)}
-                      className={`p-1 hover:scale-110 transition-transform ${
-                        schedule.active ? 'text-current' : 'text-gray-400'
-                      }`}
-                      title={schedule.active ? 'Pause schedule' : 'Resume schedule'}
-                    >
-                      {schedule.active ? 
-                        <Pause className="w-4 h-4" /> : 
-                        <Play className="w-4 h-4" />
-                      }
-                    </button>
-                    <button 
-                      onClick={() => onDeleteSchedule(schedule.id)}
-                      className="p-1 hover:text-red-600 hover:scale-110 transition-all"
-                      title="Delete schedule"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => onToggleSchedule(index, !schedule.active)}
+                    className={`p-1 ${getPauseButtonColor(schedule.color, schedule.active)} ${
+                      schedule.active ? 'text-current' : 'text-gray-400'
+                    }`}
+                    title={schedule.active ? 'Pause schedule' : 'Resume schedule'}
+                  >
+                    {schedule.active ? 
+                      <Pause className="w-4 h-4" /> : 
+                      <Play className="w-4 h-4" />
+                    }
+                  </button>
+                  <button 
+                    onClick={() => onDeleteSchedule(index)}
+                    className={`p-1 ${getCloseButtonColor(schedule.color, schedule.active)}`}
+                    title="Delete schedule"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             </div>

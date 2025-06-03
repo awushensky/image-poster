@@ -1,26 +1,28 @@
 import React, { useState } from 'react';
-import PostingTimesSelector from './posting-time-selector';
-import { type PostingTime } from '~/model/model';
-import { useFetcher } from 'react-router';
+import { type CronSchedule, type ProposedCronSchedule, type User } from '~/model/model';
+import ScheduleEditor from './schedule-editor';
 
 interface SettingsModalContentProps {
-  initialPostingTimes: PostingTime[];
-  onSaved: (times: PostingTime[]) => void;
+  user: User,
+  initialSchedules: CronSchedule[];
+  onSaved: (schedule: ProposedCronSchedule[], timezone: string) => void;
   onCancel: () => void;
 }
 
 export default function ScheduleModalContent({
-  initialPostingTimes,
+  user,
+  initialSchedules,
   onSaved,
   onCancel
 }: SettingsModalContentProps) {
-  const [postingTimes, setPostingTimes] = useState<PostingTime[]>(initialPostingTimes);
+  const [schedules, setSchedules] = useState<ProposedCronSchedule[]>(initialSchedules);
+  const [timezone, setTimezone] = useState(user.timezone);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      onSaved(postingTimes);
+      onSaved(schedules, timezone);
     } catch (error) {
       console.error('Failed to save settings:', error);
       alert('Failed to save settings');
@@ -30,18 +32,33 @@ export default function ScheduleModalContent({
   };
 
   const handleCancel = () => {
-    setPostingTimes(initialPostingTimes);
     onCancel();
   };
 
-  const hasChanges = JSON.stringify(postingTimes) !== JSON.stringify(initialPostingTimes);
+  const hasChanges = JSON.stringify(schedules) !== JSON.stringify(initialSchedules);
 
   return (
     <div className="space-y-6">
       <div>
-        <PostingTimesSelector
-          initialTimes={postingTimes}
-          onChange={setPostingTimes}
+        <ScheduleEditor
+          user={user}
+          schedules={schedules}
+          onAddSchedule={(scheduleToAdd) => {
+            setSchedules((prev) => [...prev, scheduleToAdd]);
+          }}
+          onToggleSchedule={(index, active) => {
+            setSchedules((prev) => {
+              const updated = [...prev];
+              updated[index].active = active;
+              return updated;
+            });
+          }}
+          onDeleteSchedule={(index) => {
+            setSchedules((prev) => prev.filter((_, i) => i !== index));
+          }}
+          onTimezoneChange={(newTimezone) => {
+            setTimezone(newTimezone);
+          }}
         />
       </div>
 

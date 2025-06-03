@@ -15,13 +15,13 @@ import type { PostingTime, ProposedCronSchedule } from "~/model/model";
 import { convertPostingTimesToUTC } from "~/lib/posting-time-zone-converter";
 import ScheduleEditor from "~/components/scheduling/schedule-editor";
 import { getUserPostingSchedules } from "~/db/posting-schedule-database.server";
+import ScheduleModalContent from "~/components/scheduling/schedule-modal-content";
 
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
   const schedules = await getUserPostingSchedules(user.did);
   const images = await estimateImageSchedule(await getImageQueueForUser(user.did), schedules);
-  // const images = estimateImagePostingTimes(await getImageQueueForUser(user.did), postingTimes);
   
   return { user, schedules, images };
 }
@@ -48,47 +48,22 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
     setScheduleModalOpen(false);
   };
 
-  const handleAddSchedule = async (schedule: ProposedCronSchedule) => {
-    setLoading(true);
-    await fetcher.submit(
-      { schedule: JSON.stringify(schedule) },
-      { method: 'POST', action: '/api/posting-schedules' }
-    );
-    setLoading(false);
-  }
+  const handleScheduleModalSave = async (schedules: ProposedCronSchedule[], timezone: string) => {
+    const tasks = [];
+    tasks.push(fetcher.submit(
+      { schedules: JSON.stringify(schedules) },
+      { method: "POST", action: "/api/posting-schedules" }
+    ));
 
-  const handleToggleSchedule = async (scheduleId: number, active: boolean) => {
-    setLoading(true);
-    await fetcher.submit(
-      { update: JSON.stringify({ active }) },
-      { method: 'PUT', action: `/api/posting-schedules/${scheduleId}` }
-    );
-    setLoading(false);
-  }
+    if (timezone !== user.timezone) {
+      tasks.push(
+      fetcher.submit(
+        { timezone },
+        { method: 'PUT', action: '/api/user/timezone' }
+      ));
+    }
 
-  const handleDeleteSchedule = async (scheduleId: number) => {
-    setLoading(true);
-    await fetcher.submit(
-      { scheduleId: scheduleId.toString() },
-      { method: 'DELETE', action: `/api/posting-schedules/${scheduleId}` }
-    );
-    setLoading(false);
-  }
-
-  const setUserTimezone = async (timezone: string) => {
-    setLoading(true);
-    await fetcher.submit(
-      { timezone },
-      { method: 'PUT', action: '/api/user/timezone' }
-    );
-    setLoading(false);
-  }
-
-  const handleScheduleModalSave = async (postingTimes: PostingTime[]) => {
-    fetcher.submit(
-      { values: JSON.stringify(convertPostingTimesToUTC(postingTimes, user.timezone)) },
-      { method: "POST", action: "/api/posting-times" }
-    );
+    await Promise.all(tasks);
     setScheduleModalOpen(false);
   }
 
@@ -132,18 +107,11 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
         <Modal
           onClose={handleScheduleModalClose}
           title="Schedule">
-            {/* <ScheduleModalContent
-              initialPostingTimes={postingTimes}
+            <ScheduleModalContent
+              user={user}
+              initialSchedules={schedules}
               onSaved={handleScheduleModalSave}
               onCancel={handleScheduleModalClose}
-            /> */}
-            <ScheduleEditor
-              user={user}
-              schedules={schedules}
-              onAddSchedule={handleAddSchedule}
-              onToggleSchedule={handleToggleSchedule}
-              onDeleteSchedule={handleDeleteSchedule}
-              onTimezoneChange={setUserTimezone}
             />
         </Modal>
       )}

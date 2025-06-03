@@ -1,4 +1,4 @@
-export const commonTimezones = [
+export const commonTimezones: readonly string[] = [
   'America/New_York',
   'America/Chicago',
   'America/Denver', 
@@ -9,6 +9,9 @@ export const commonTimezones = [
   'Australia/Sydney',
   'UTC'
 ];
+
+export const dayLabels: readonly string[] = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+export const dayNames: readonly string[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 /**
  * Gets the user's timezone from the browser

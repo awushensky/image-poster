@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Clock, Plus, X, Calendar } from 'lucide-react';
-import TimeInput from '../time-input';
-import DaysOfWeekInput from './days-of-week-input';
+import TimeInput from './time-input-old';
+import DaysOfWeekInput from './days-of-week-input-old';
 import { DAYS_OF_WEEK, WEEKDAYS, WEEKENDS, type PostingTime } from '~/model/model';
 
 

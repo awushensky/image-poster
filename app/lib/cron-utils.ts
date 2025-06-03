@@ -1,4 +1,5 @@
 import { CronExpressionParser } from 'cron-parser';
+import { dayNames } from './time-utils';
 
 /**
  * Validate a cron expression
@@ -43,16 +44,9 @@ export function cronToDescription(cron: string): string {
   const parts = cron.split(' ');
   const minute = parts[0];
   const hour = parts[1];
-  const dayOfWeek = parts[4];
   
   const time = `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
-  
-  if (dayOfWeek === '*') {
-    return `Daily at ${time}`;
-  }
-  
-  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const days = dayOfWeek.split(',').map(d => dayNames[parseInt(d)]);
+  const days = cronToDays(cron).map(day => dayNames[day]);
   
   if (days.length === 5 && days.every(day => !['Saturday', 'Sunday'].includes(day))) {
     return `Weekdays at ${time}`;
@@ -62,6 +56,19 @@ export function cronToDescription(cron: string): string {
   }
   
   return `${days.join(', ')} at ${time}`;
+}
+
+export function cronToDays(cron: string): number[] {
+  if (!validateCron(cron)) {
+    throw new Error('Invalid cron expression');
+  }
+
+  const dayOfWeek = cron.split(' ')[4];
+  if (dayOfWeek === '*') {
+    return [0, 1, 2, 3, 4, 5, 6];
+  }
+
+  return dayOfWeek.split(',').map(d => parseInt(d));
 }
 
 /**
@@ -96,9 +103,9 @@ export function getNextExecutionsForMultipleSchedules(
   schedules: string[],
   timezone: string,
   count: number,
-): (Date | undefined)[] {
-  if (!schedules || !Array.isArray(schedules) || schedules.length === 0) {
-    return Array(count).fill(undefined);
+): Date[] | undefined {
+  if (!schedules || schedules.length === 0) {
+    return undefined;
   }
 
   const crons = schedules.map(schedule => CronExpressionParser.parse(schedule, { tz: timezone }));
