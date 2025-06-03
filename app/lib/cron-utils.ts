@@ -19,16 +19,37 @@ export function validateCron(cronExpression: string): boolean {
  * Convert time and days to cron expression
  * @param hour the hour of the day (0-23)
  * @param minute the minute of the hour (0-59)
- * @param selectedDays an array of selected days (0-6, where 0 is Sunday)
+ * @param days an array of selected days (0-6, where 0 is Sunday)
  * @returns a cron expression string
  */
-export function timeToCron(hour: number, minute: number, selectedDays: number[]): string {
-  if (selectedDays.length === 0) {
+export function timeToCron(hour: number, minute: number, days: number[]): string {
+  if (days.length === 0) {
     throw new Error('At least one day must be selected');
   }
 
-  const daysCron = selectedDays.length === 7 ? '*' : selectedDays.join(',');
+  const daysCron = days.length === 7 ? '*' : days.join(',');
   return `${minute} ${hour} * * ${daysCron}`;
+}
+
+/**
+ * Convert a cron expression to its time components
+ * @param cron the cron expression to convert
+ * @returns an object containing the hour, minute, and days
+ */
+export function cronToTime(cron: string): { hour: number; minute: number, day_of_week: number }[] {
+  if (!validateCron(cron)) {
+    throw new Error('Invalid cron expression');
+  }
+  const parts = cron.split(' ');
+  const minute = parseInt(parts[0], 10);
+  const hour = parseInt(parts[1], 10);
+  const days = cronToDays(cron);
+
+  return days.map(day => ({
+    hour,
+    minute,
+    day_of_week: day,
+  }));
 }
 
 /**

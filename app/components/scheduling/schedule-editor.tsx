@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Clock, Plus, X, Globe, PauseCircle, PlayCircle } from 'lucide-react';
-import type { CronSchedule, ProposedCronSchedule, User } from '~/model/model';
+import type { CronSchedule, ProposedCronSchedule } from '~/model/model';
 import { cronToDays, cronToDescription, getNextExecutionsForMultipleSchedules, timeToCron } from '~/lib/cron-utils';
 import { commonTimezones, dayNames } from '~/lib/time-utils';
 import { DaysOfWeekInput } from './days-of-week-input';
@@ -8,7 +8,7 @@ import { TimeInput } from './time-input';
 
 
 interface ScheduleEditorProps {
-  user: User;
+  timezone: string;
   schedules: ProposedCronSchedule[];
   onAddSchedule: (scheduleToAdd: ProposedCronSchedule) => void;
   onToggleSchedule: (index: number, active: boolean) => void;
@@ -17,7 +17,7 @@ interface ScheduleEditorProps {
 }
 
 const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
-  user,
+  timezone,
   schedules,
   onAddSchedule,
   onToggleSchedule,
@@ -66,7 +66,7 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
   };
 
   const activeSchedules = schedules.filter(s => s.active);
-  const nextExecutions = getNextExecutionsForMultipleSchedules(activeSchedules.map(s => s.cron_expression), user.timezone, 3) || [];
+  const nextExecutions = getNextExecutionsForMultipleSchedules(activeSchedules.map(s => s.cron_expression), timezone, 3) || [];
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
@@ -80,7 +80,7 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
             <h2 className="text-xl font-semibold text-gray-900">Posting Schedule</h2>
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <Globe className="w-4 h-4" />
-              <span>{user.timezone}</span>
+              <span>{timezone}</span>
               <button 
                 onClick={() => setShowTimezoneSelector(!showTimezoneSelector)}
                 className="text-blue-600 hover:text-blue-800"
@@ -99,7 +99,7 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
         <div className="mb-6 p-4 bg-gray-50 rounded-lg">
           <label className="block text-sm font-medium text-gray-700 mb-2">Select Timezone</label>
           <select 
-            value={user.timezone}
+            value={timezone}
             onChange={(e) => {
               onTimezoneChange(e.target.value);
               setShowTimezoneSelector(false);

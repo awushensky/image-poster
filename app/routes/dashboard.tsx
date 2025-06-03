@@ -11,9 +11,7 @@ import { useState } from "react";
 import Modal from "~/components/modal";
 import { estimateImageSchedule } from "~/lib/posting-time-estimator";
 import { useFetcher } from "react-router";
-import type { PostingTime, ProposedCronSchedule } from "~/model/model";
-import { convertPostingTimesToUTC } from "~/lib/posting-time-zone-converter";
-import ScheduleEditor from "~/components/scheduling/schedule-editor";
+import type { ProposedCronSchedule } from "~/model/model";
 import { getUserPostingSchedules } from "~/db/posting-schedule-database.server";
 import ScheduleModalContent from "~/components/scheduling/schedule-modal-content";
 
@@ -48,18 +46,21 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
     setScheduleModalOpen(false);
   };
 
-  const handleScheduleModalSave = async (schedules: ProposedCronSchedule[], timezone: string) => {
+  const handleScheduleModalSave = async (updatedSchedules: ProposedCronSchedule[], timezone: string) => {
     const tasks = [];
-    tasks.push(fetcher.submit(
-      { schedules: JSON.stringify(schedules) },
-      { method: "POST", action: "/api/posting-schedules" }
-    ));
+
+    if (JSON.stringify(updatedSchedules) !== JSON.stringify(schedules)) {
+      tasks.push(fetcher.submit(
+        { schedules: JSON.stringify(updatedSchedules) },
+        { method: "POST", action: "/api/posting-schedules" }
+      ));
+    }
 
     if (timezone !== user.timezone) {
       tasks.push(
       fetcher.submit(
         { timezone },
-        { method: 'PUT', action: '/api/user/timezone' }
+        { method: 'PUT', action: '/api/user' }
       ));
     }
 
@@ -108,7 +109,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
           onClose={handleScheduleModalClose}
           title="Schedule">
             <ScheduleModalContent
-              user={user}
+              initialTimezone={user.timezone}
               initialSchedules={schedules}
               onSaved={handleScheduleModalSave}
               onCancel={handleScheduleModalClose}
@@ -123,8 +124,9 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
       />
 
       <main className={`max-w-7xl mx-auto p-6`}>
-        <ScheduleSummary 
-          schedule={[]}
+        <ScheduleSummary
+          user={user}
+          schedules={schedules}
           onEdit={() => setScheduleModalOpen(true)}
         />
 

@@ -3,20 +3,20 @@ import { type CronSchedule, type ProposedCronSchedule, type User } from '~/model
 import ScheduleEditor from './schedule-editor';
 
 interface SettingsModalContentProps {
-  user: User,
+  initialTimezone: string;
   initialSchedules: CronSchedule[];
   onSaved: (schedule: ProposedCronSchedule[], timezone: string) => void;
   onCancel: () => void;
 }
 
 export default function ScheduleModalContent({
-  user,
+  initialTimezone,
   initialSchedules,
   onSaved,
   onCancel
 }: SettingsModalContentProps) {
   const [schedules, setSchedules] = useState<ProposedCronSchedule[]>(initialSchedules);
-  const [timezone, setTimezone] = useState(user.timezone);
+  const [timezone, setTimezone] = useState(initialTimezone);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
@@ -35,14 +35,13 @@ export default function ScheduleModalContent({
     onCancel();
   };
 
-  const hasChanges = JSON.stringify(schedules) !== JSON.stringify(initialSchedules);
-  console.log('hasChanges:', hasChanges, 'initialSchedules:', initialSchedules, 'schedules:', schedules);
+  const hasChanges = JSON.stringify(schedules) !== JSON.stringify(initialSchedules) || timezone !== initialTimezone;
 
   return (
     <div className="space-y-6">
       <div>
         <ScheduleEditor
-          user={user}
+          timezone={timezone}
           schedules={schedules}
           onAddSchedule={(scheduleToAdd) => {
             setSchedules((prev) => [...prev, scheduleToAdd]);

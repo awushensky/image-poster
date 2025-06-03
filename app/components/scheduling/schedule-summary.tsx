@@ -1,13 +1,14 @@
-import type { PostingTime } from "~/model/model";
+import type { ProposedCronSchedule, User } from "~/model/model";
 import ScheduleChart from "./schedule-chart";
 
 
 interface ScheduleSummaryProps {
-  schedule: PostingTime[];
+  user: User;
+  schedules: ProposedCronSchedule[];
   onEdit?: () => void;
 }
 
-const ScheduleSummary: React.FC<ScheduleSummaryProps> = ({ schedule, onEdit }) => {
+const ScheduleSummary: React.FC<ScheduleSummaryProps> = ({ user, schedules, onEdit }) => {
   const getTimezoneDisplay = (): string => {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const now = new Date();
@@ -36,15 +37,15 @@ const ScheduleSummary: React.FC<ScheduleSummaryProps> = ({ schedule, onEdit }) =
             onClick={onEdit}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
-            {schedule.length === 0 ? "Set Schedule" : "Edit Schedule"}
+            {schedules.length === 0 ? "Set Schedule" : "Edit Schedule"}
           </button>
         }
       </div>
 
-      {schedule.length <= 0 ? (
+      {schedules.length <= 0 ? (
         <p className="text-gray-500">No posting schedule configured</p>
       ) : (
-        <ScheduleChart schedule={schedule} />
+        <ScheduleChart user={user} schedules={schedules} />
       )}
     </div>
   );

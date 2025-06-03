@@ -10,6 +10,7 @@ export default [
   route("api/image/:storageKey", "api/api.image.ts"),
   route("api/posting-times", "api/api.posting-times.ts"),
   route("api/posting-schedules", "api/api.posting-schedules.ts"),
+  route("api/user", "api/api.user.ts"),
 
   route("client-metadata.json", "routes/client-metadata.json.tsx"),
   route("jwks.json", "routes/jwks.json.tsx"),
