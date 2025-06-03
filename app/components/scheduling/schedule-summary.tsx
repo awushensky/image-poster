@@ -9,27 +9,10 @@ interface ScheduleSummaryProps {
 }
 
 const ScheduleSummary: React.FC<ScheduleSummaryProps> = ({ user, schedules, onEdit }) => {
-  const getTimezoneDisplay = (): string => {
-    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const now = new Date();
-
-    const longName = new Intl.DateTimeFormat('en-US', {
-      timeZoneName: 'long',
-      timeZone: timeZone
-    }).formatToParts(now).find(part => part.type === 'timeZoneName')?.value || '';
-
-    const shortName = new Intl.DateTimeFormat('en-US', {
-      timeZoneName: 'short',
-      timeZone: timeZone
-    }).formatToParts(now).find(part => part.type === 'timeZoneName')?.value || '';
-
-    return `${longName} (${shortName})`;
-  };
-
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Posting Schedule - {getTimezoneDisplay()}</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Posting Schedule - {user.timezone}</h3>
         {onEdit === undefined ?
           <></>
           :
