@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Clock, Plus, Pause, X, Globe, Play } from 'lucide-react';
+import { Clock, Plus, X, Globe, PauseCircle, PlayCircle } from 'lucide-react';
 import type { CronSchedule, ProposedCronSchedule, User } from '~/model/model';
-import { cronToDays, cronToDescription, getNextExecutions, getNextExecutionsForMultipleSchedules, timeToCron } from '~/lib/cron-utils';
+import { cronToDays, cronToDescription, getNextExecutionsForMultipleSchedules, timeToCron } from '~/lib/cron-utils';
 import { commonTimezones, dayNames } from '~/lib/time-utils';
 import { DaysOfWeekInput } from './days-of-week-input';
 import { TimeInput } from './time-input';
@@ -51,14 +51,6 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
   const getRandomColor = (): CronSchedule['color'] => {
     const colors: CronSchedule['color'][] = ['blue', 'green', 'purple', 'orange', 'red', 'indigo'];
     return colors[Math.floor(Math.random() * colors.length)];
-  };
-
-  const toggleDay = (day: number) => {
-    setSelectedDays(prev => 
-      prev.includes(day) 
-        ? prev.filter(d => d !== day)
-        : [...prev, day].sort()
-    );
   };
 
   const handleAddSchedule = () => {
@@ -174,14 +166,12 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={() => onToggleSchedule(index, !schedule.active)}
-                    className={`p-1 ${getPauseButtonColor(schedule.color, schedule.active)} ${
-                      schedule.active ? 'text-current' : 'text-gray-400'
-                    }`}
+                    className={`p-1 ${getPauseButtonColor(schedule.color, schedule.active)}`}
                     title={schedule.active ? 'Pause schedule' : 'Resume schedule'}
                   >
                     {schedule.active ? 
-                      <Pause className="w-4 h-4" /> : 
-                      <Play className="w-4 h-4" />
+                      <PauseCircle className="w-4 h-4" /> :
+                      <PlayCircle className="w-4 h-4" />
                     }
                   </button>
                   <button 

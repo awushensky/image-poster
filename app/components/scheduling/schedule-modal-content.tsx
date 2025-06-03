@@ -36,6 +36,7 @@ export default function ScheduleModalContent({
   };
 
   const hasChanges = JSON.stringify(schedules) !== JSON.stringify(initialSchedules);
+  console.log('hasChanges:', hasChanges, 'initialSchedules:', initialSchedules, 'schedules:', schedules);
 
   return (
     <div className="space-y-6">
@@ -49,7 +50,7 @@ export default function ScheduleModalContent({
           onToggleSchedule={(index, active) => {
             setSchedules((prev) => {
               const updated = [...prev];
-              updated[index].active = active;
+              updated[index] = { ...updated[index], active };
               return updated;
             });
           }}
