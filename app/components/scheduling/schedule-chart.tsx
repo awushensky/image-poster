@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import type { ProposedCronSchedule, User } from "~/model/model";
+import type { ProposedPostingSchedule, User } from "~/model/model";
 import { cronToDescription, cronToTime } from "~/lib/cron-utils";
 
 interface ScheduleChartProps {
-  schedules: ProposedCronSchedule[];
+  schedules: ProposedPostingSchedule[];
   user: User;
 }
 
 interface ParsedSchedule {
-  schedule: ProposedCronSchedule;
+  schedule: ProposedPostingSchedule;
   day_of_week: number;
   hour: number;
   minute: number;
@@ -18,7 +18,7 @@ interface GroupedSchedule {
   day_of_week: number;
   hour: number;
   minute: number;
-  schedules: ProposedCronSchedule[];
+  schedules: ProposedPostingSchedule[];
   count: number;
 }
 

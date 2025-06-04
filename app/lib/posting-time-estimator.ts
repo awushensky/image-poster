@@ -1,4 +1,4 @@
-import type { CronSchedule, QueuedImage } from "~/model/model";
+import type { PostingSchedule, QueuedImage } from "~/model/model";
 import { getNextExecutionsForMultipleSchedules } from "./cron-utils";
 
 
@@ -8,7 +8,7 @@ export interface ImageWithEstimatedUpload extends QueuedImage {
 
 export function estimateImageSchedule(
   queuedImages: QueuedImage[],
-  schedules: CronSchedule[],
+  schedules: PostingSchedule[],
 ): ImageWithEstimatedUpload[] {
   if (!queuedImages.length || !schedules.length) {
     return queuedImages.map(image => ({
@@ -25,6 +25,6 @@ export function estimateImageSchedule(
 
   return queuedImages.map((image, index) => ({
     ...image,
-    estimatedPostTime: executionDates ? executionDates[index] : undefined
+    estimatedPostTime: executionDates.length > index ? executionDates[index] : undefined
   }));
 }

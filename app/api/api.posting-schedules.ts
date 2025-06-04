@@ -1,7 +1,7 @@
 import { requireUser } from "~/auth/session.server";
 import type { Route } from "./+types/api.posting-schedules";
 import { updatePostingSchedules } from "~/db/posting-schedule-database.server";
-import type { ProposedCronSchedule, User } from "~/model/model";
+import type { ProposedPostingSchedule, User } from "~/model/model";
 
 async function updateSchedules(user: User, formData: FormData) {
   const formDataEntry = formData.get("schedules");
@@ -12,7 +12,7 @@ async function updateSchedules(user: User, formData: FormData) {
   }
 
   try {
-    const schedule = JSON.parse(formDataEntry.toString()) as ProposedCronSchedule[];
+    const schedule = JSON.parse(formDataEntry.toString()) as ProposedPostingSchedule[];
     return await updatePostingSchedules(user.did, schedule);
   } catch (error) {
     throw new Response("Invalid schedule format", {

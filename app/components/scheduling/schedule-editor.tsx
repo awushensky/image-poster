@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Clock, Plus, X, Globe, PauseCircle, PlayCircle } from 'lucide-react';
-import type { CronSchedule, ProposedCronSchedule } from '~/model/model';
+import type { PostingSchedule, ProposedPostingSchedule } from '~/model/model';
 import { cronToDays, cronToDescription, getNextExecutionsForMultipleSchedules, timeToCron } from '~/lib/cron-utils';
 import { commonTimezones, DAY_NAMES } from '~/lib/time-utils';
 import { DaysOfWeekInput } from './days-of-week-input';
@@ -9,8 +9,8 @@ import { TimeInput } from './time-input';
 
 interface ScheduleEditorProps {
   timezone: string;
-  schedules: ProposedCronSchedule[];
-  onAddSchedule: (scheduleToAdd: ProposedCronSchedule) => void;
+  schedules: ProposedPostingSchedule[];
+  onAddSchedule: (scheduleToAdd: ProposedPostingSchedule) => void;
   onToggleSchedule: (index: number, active: boolean) => void;
   onDeleteSchedule: (index: number) => void;
   onTimezoneChange: (timezone: string) => void;
@@ -28,28 +28,28 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
   const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [showTimezoneSelector, setShowTimezoneSelector] = useState(false);
 
-  function getCardColor(color: CronSchedule['color'], active: boolean): string {
+  function getCardColor(color: PostingSchedule['color'], active: boolean): string {
     return active ? `bg-${color}-50 border-${color}-200` : `bg-gray-50 border-gray-200`;
   }
 
-  function getLargeTextColor(color: CronSchedule['color'], active: boolean): string {
+  function getLargeTextColor(color: PostingSchedule['color'], active: boolean): string {
     return active ? `text-${color}-900` : 'text-gray-400';
   }
 
-  function getSmallTextColor(color: CronSchedule['color'], active: boolean): string {
+  function getSmallTextColor(color: PostingSchedule['color'], active: boolean): string {
     return active ? `text-${color}-600` : 'text-gray-400';
   }
 
-  function getPauseButtonColor(color: CronSchedule['color'], active: boolean): string {
+  function getPauseButtonColor(color: PostingSchedule['color'], active: boolean): string {
     return active ? `text-${color}-600 hover:text-gray-600` : `text-gray-400 hover:text-${color}-900`;
   }
 
-  function getCloseButtonColor(color: CronSchedule['color'], active: boolean): string {
+  function getCloseButtonColor(color: PostingSchedule['color'], active: boolean): string {
     return active ? `text-${color}-600 hover:text-red-600` : `text-gray-400 hover:text-red-600`;
   }
 
-  const getRandomColor = (): CronSchedule['color'] => {
-    const colors: CronSchedule['color'][] = ['blue', 'green', 'purple', 'orange', 'red', 'indigo'];
+  const getRandomColor = (): PostingSchedule['color'] => {
+    const colors: PostingSchedule['color'][] = ['blue', 'green', 'purple', 'orange', 'red', 'indigo'];
     return colors[Math.floor(Math.random() * colors.length)];
   };
 
@@ -66,7 +66,7 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
   };
 
   const activeSchedules = schedules.filter(s => s.active);
-  const nextExecutions = getNextExecutionsForMultipleSchedules(activeSchedules.map(s => s.cron_expression), timezone, 3) || [];
+  const nextExecutions = getNextExecutionsForMultipleSchedules(activeSchedules.map(s => s.cron_expression), timezone, 3);
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">

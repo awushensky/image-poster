@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { type CronSchedule, type ProposedCronSchedule, type User } from '~/model/model';
+import { type PostingSchedule, type ProposedPostingSchedule, type User } from '~/model/model';
 import ScheduleEditor from './schedule-editor';
 
 interface SettingsModalContentProps {
   initialTimezone: string;
-  initialSchedules: CronSchedule[];
-  onSaved: (schedule: ProposedCronSchedule[], timezone: string) => void;
+  initialSchedules: PostingSchedule[];
+  onSaved: (schedule: ProposedPostingSchedule[], timezone: string) => void;
   onCancel: () => void;
 }
 
@@ -15,7 +15,7 @@ export default function ScheduleModalContent({
   onSaved,
   onCancel
 }: SettingsModalContentProps) {
-  const [schedules, setSchedules] = useState<ProposedCronSchedule[]>(initialSchedules);
+  const [schedules, setSchedules] = useState<ProposedPostingSchedule[]>(initialSchedules);
   const [timezone, setTimezone] = useState(initialTimezone);
   const [isSaving, setIsSaving] = useState(false);
 

@@ -11,6 +11,7 @@ export async function createImageQueueEntry(
   postText: string
 ): Promise<QueuedImage> {
   return getMutex(MUTEX_PURPOSE, userDid).runExclusive(async () => {
+    console.log('Got mutex for user:', userDid);
     const db = await ensureDatabase();
     
     await db.run('BEGIN TRANSACTION');

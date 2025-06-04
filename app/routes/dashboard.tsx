@@ -8,7 +8,7 @@ import { useState } from "react";
 import Modal from "~/components/modal";
 import { estimateImageSchedule } from "~/lib/posting-time-estimator";
 import { useFetcher, useRevalidator } from "react-router";
-import type { ProposedCronSchedule } from "~/model/model";
+import type { ProposedPostingSchedule } from "~/model/model";
 import { getUserPostingSchedules } from "~/db/posting-schedule-database.server";
 import ScheduleModalContent from "~/components/scheduling/schedule-modal-content";
 import UploadModal from "~/components/image-upload/upload-modal";
@@ -38,7 +38,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
     setScheduleModalOpen(false);
   };
 
-  const handleScheduleModalSave = async (updatedSchedules: ProposedCronSchedule[], timezone: string) => {
+  const handleScheduleModalSave = async (updatedSchedules: ProposedPostingSchedule[], timezone: string) => {
     const tasks = [];
 
     if (JSON.stringify(updatedSchedules) !== JSON.stringify(schedules)) {

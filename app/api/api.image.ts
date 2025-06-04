@@ -42,6 +42,11 @@ async function loadImage(images: QueuedImage[], storageKey: string): Promise<Fil
   return file;
 }
 
+/**
+ * Read an image from the request and upload it to the file storage.
+ * @param user the user uploading the image
+ * @param request the request containing the image file
+ */
 async function uploadImage(user: User, request: Request): Promise<void> {
   const uploadHandler: FileUploadHandler = async (fileUpload: FileUpload) => {
     if (
@@ -57,19 +62,13 @@ async function uploadImage(user: User, request: Request): Promise<void> {
         // streaming data from the request.body); store them as soon as possible.
         await fileStorage.set(storageKey, fileUpload);
         await createImageQueueEntry(user.did, storageKey, fileNameToPostText(fileUpload.name));
-
-        // Return a File for the FormData object. This is a LazyFile that knows how
-        // to access the file's content if needed (using e.g. file.stream()) but
-        // waits until it is requested to actually read anything.
-        return fileStorage.get(storageKey);
       } catch (error) {
         console.error('Upload error:', error);
-        return Promise.reject('Upload failed');
+        throw error;
       }
     } else {
-      console.warn('Attempted to upload file with unsupported field name or type:', {
-        fieldName: fileUpload.fieldName,
-        type: fileUpload.type,
+      throw new Response("Attempted to upload file with unsupported field name or type", {
+        status: 400,
       });
     }
   }
@@ -81,10 +80,10 @@ async function uploadImage(user: User, request: Request): Promise<void> {
 }
 
 /**
- * Perform an update on an image.
- * @param user 
- * @param storageKey 
- * @param update 
+ * Update an image in the queue. This can be used to reorder the image in the queue or update its metadata.
+ * @param user the user performing the update
+ * @param storageKey the storage key of the image to update
+ * @param update the form data containing the update information
  * @returns 
  */
 async function updateImage(user: User, storageKey: string, update: FormData): Promise<void> {
@@ -118,6 +117,11 @@ async function updateImage(user: User, storageKey: string, update: FormData): Pr
   }
 }
 
+/**
+ * Delete an image from the queue and remove it from file storage.
+ * @param user the user performing the delete
+ * @param storageKey the storage key of the image to delete
+ */
 async function deleteImage(user: User, storageKey: string): Promise<void> {
   const image = readImageQueueEntry(user.did, storageKey);
   if (!image) {

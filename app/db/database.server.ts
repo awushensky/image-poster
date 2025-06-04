@@ -73,9 +73,12 @@ export async function setupTables(db: SqliteDatabase) {
       cron_expression TEXT NOT NULL,
       color TEXT NOT NULL CHECK (color IN ('blue', 'green', 'purple', 'orange', 'red', 'indigo')),
       active BOOLEAN DEFAULT TRUE NOT NULL,
+      last_executed DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_did) REFERENCES users (did) ON DELETE CASCADE
     );
+
+    CREATE INDEX IF NOT EXISTS idx_posting_schedules_active ON posting_schedules(active, user_did)
   `);
 }

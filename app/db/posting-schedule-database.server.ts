@@ -1,11 +1,11 @@
-import type { CronSchedule, ProposedCronSchedule } from "~/model/model";
+import type { PostingSchedule, ProposedPostingSchedule } from "~/model/model";
 import { ensureDatabase } from './database.server';
 import { getMutex } from "~/lib/mutex";
 
 
 const MUTEX_PURPOSE = 'posting-schedule';
 
-export async function getUserPostingSchedules(userDid: string): Promise<CronSchedule[]> {
+export async function getUserPostingSchedules(userDid: string): Promise<PostingSchedule[]> {
   const db = await ensureDatabase();
   const rows = await db.all(
     'SELECT * FROM posting_schedules WHERE user_did = ? ORDER BY created_at',
@@ -18,15 +18,29 @@ export async function getUserPostingSchedules(userDid: string): Promise<CronSche
     cron_expression: row.cron_expression,
     color: row.color,
     active: row.active !== 0,
+    last_executed: row.last_executed ? new Date(row.last_executed) : undefined,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
-  })) as CronSchedule[];
+  })) as PostingSchedule[];
+}
+
+export async function getAllActivePostingSchedules(): Promise<(PostingSchedule & { timezone: string })[]> {
+  const db = await ensureDatabase();
+  return await db.all(`
+    SELECT 
+      ps.*,
+      u.timezone
+    FROM posting_schedules ps
+    JOIN users u ON ps.user_did = u.did
+    WHERE ps.active = TRUE
+    ORDER BY ps.id
+  `) as (PostingSchedule & { timezone: string })[];
 }
 
 async function addPostingSchedule(
   userDid: string,
-  schedule: ProposedCronSchedule
-): Promise<CronSchedule> {
+  schedule: ProposedPostingSchedule
+): Promise<PostingSchedule> {
   const db = await ensureDatabase();
   const result = await db.run(`
     INSERT INTO posting_schedules (user_did, cron_expression, color, active)
@@ -48,10 +62,19 @@ async function addPostingSchedule(
   };
 }
 
+export async function updateScheduleLastExecuted(scheduleId: number) {
+  const db = await ensureDatabase();
+  await db.run(`
+    UPDATE posting_schedules 
+    SET last_executed = CURRENT_TIMESTAMP 
+    WHERE id = ?
+  `, [scheduleId]);
+}
+
 export async function updatePostingSchedules(
   userDid: string,
-  schedules: ProposedCronSchedule[]
-): Promise<CronSchedule[]> {
+  schedules: ProposedPostingSchedule[]
+): Promise<PostingSchedule[]> {
   return getMutex(MUTEX_PURPOSE, userDid).runExclusive(async () => {
     const db = await ensureDatabase();
     await db.run('BEGIN TRANSACTION');
@@ -59,7 +82,7 @@ export async function updatePostingSchedules(
     try {
       await db.run('DELETE FROM posting_schedules WHERE user_did = ?', [userDid]);
 
-      let results: CronSchedule[] = [];
+      let results: PostingSchedule[] = [];
       for (const schedule of schedules) {
         results.push(await addPostingSchedule(userDid, schedule));
       }

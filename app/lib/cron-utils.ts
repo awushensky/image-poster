@@ -92,25 +92,20 @@ export function cronToDays(cron: string): number[] {
   return dayOfWeek.split(',').map(d => parseInt(d));
 }
 
+export function getPreviousExecution(cronExpression: string, timezone: string): Date {
+  const interval = CronExpressionParser.parse(cronExpression, { tz: timezone });
+  return interval.prev().toDate();
+}
+
 /**
- * Get the next N execution times for a cron expression
+ * Get the next execution time for a cron expression
  * @param cronExpression the cron expression to evaluate
  * @param timezone the timezone in which to evaluate the cron expression
- * @param count the number of next execution times to return
- * @returns an array of Date objects representing the next execution times
+ * @returns the next execution time as a Date object
  */
-export function getNextExecutions(
-  cronExpression: string,
-  timezone: string,
-  count: number,
-): Date[] {
-  try {
-    const interval = CronExpressionParser.parse(cronExpression, { tz: timezone });
-    return interval.take(count).map(cronDate => cronDate.toDate());
-  } catch (error) {
-    console.error('Error calculating next executions:', error);
-    return [];
-  }
+export function getNextExecution(cronExpression: string, timezone: string): Date {
+  const interval = CronExpressionParser.parse(cronExpression, { tz: timezone });
+  return interval.next().toDate();
 }
 
 /**
@@ -124,9 +119,9 @@ export function getNextExecutionsForMultipleSchedules(
   schedules: string[],
   timezone: string,
   count: number,
-): Date[] | undefined {
+): Date[] {
   if (!schedules || schedules.length === 0) {
-    return undefined;
+    return [];
   }
 
   const crons = schedules.map(schedule => CronExpressionParser.parse(schedule, { tz: timezone }));

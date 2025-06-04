@@ -1,10 +1,10 @@
-import type { ProposedCronSchedule, User } from "~/model/model";
+import type { ProposedPostingSchedule, User } from "~/model/model";
 import ScheduleChart from "./schedule-chart";
 
 
 interface ScheduleSummaryProps {
   user: User;
-  schedules: ProposedCronSchedule[];
+  schedules: ProposedPostingSchedule[];
   onEdit?: () => void;
 }
 
