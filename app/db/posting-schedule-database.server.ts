@@ -54,7 +54,7 @@ export async function updatePostingSchedules(
 ): Promise<CronSchedule[]> {
   return getMutex(MUTEX_PURPOSE, userDid).runExclusive(async () => {
     const db = await ensureDatabase();
-    db.run('BEGIN TRANSACTION');
+    await db.run('BEGIN TRANSACTION');
 
     try {
       await db.run('DELETE FROM posting_schedules WHERE user_did = ?', [userDid]);

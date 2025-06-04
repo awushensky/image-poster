@@ -2,28 +2,17 @@ import { NodeOAuthClient, type NodeSavedSession, type Session, TokenRefreshError
 import { JoseKey } from '@atproto/jwk-jose';
 import { Agent } from '@atproto/api';
 import { createOrUpdateUser } from '~/db/user-database.server';
-import {
-  deleteOAuthSession,
-  getOAuthSession,
-  storeOAuthSession,
-} from '~/db/user-session-database.server';
-import { Mutex } from 'async-mutex';
-import { getUserTimezone } from './time-utils';
+import { getUserTimezone } from '../lib/time-utils';
+import { deleteOAuthSession, getOAuthSession, storeOAuthSession } from '~/db/oauth-session-database.server';
+import { getMutex } from '../lib/mutex';
 
 
 let oauthClient: NodeOAuthClient;
 
-const mutexes = new Map<string, Mutex>();
-
-function getOrCreateMutex(key: string): Mutex {
-  if (!mutexes.has(key)) {
-    mutexes.set(key, new Mutex());
-  }
-  return mutexes.get(key)!;
-}
+const MUTEX_PURPOSE = 'oauth-client';
 
 async function acquireInMemoryLock<T>(name: string, fn: () => T | Promise<T> | PromiseLike<T>): Promise<T> {
-  return await getOrCreateMutex(name).runExclusive(async () => {
+  return await getMutex(MUTEX_PURPOSE, name).runExclusive(async () => {
     return await fn();
   });
 }

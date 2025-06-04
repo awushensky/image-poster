@@ -1,6 +1,6 @@
 import ScheduleSummary from "~/components/scheduling/schedule-summary";
 import type { Route } from "./+types/dashboard";
-import { requireUser } from "~/lib/session.server";
+import { requireUser } from "~/auth/session.server";
 import { getImageQueueForUser } from "~/db/image-queue-database.server";
 import ImageQueue from "~/components/image-queue/image-queue";
 import Header from "~/components/header";

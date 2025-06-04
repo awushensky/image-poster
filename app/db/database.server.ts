@@ -34,13 +34,19 @@ export async function setupTables(db: SqliteDatabase) {
     );
 
     CREATE TABLE IF NOT EXISTS user_sessions (
-      user_did TEXT PRIMARY KEY,
-      session_token TEXT NOT NULL,
-      session_data TEXT NOT NULL,
+      session_token TEXT PRIMARY KEY,
+      user_did TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       last_used_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_did) REFERENCES user (did) ON DELETE CASCADE,
-      UNIQUE(session_token)
+      FOREIGN KEY (user_did) REFERENCES users (did) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS oauth_sessions (
+      user_did TEXT PRIMARY KEY,
+      session_data TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_did) REFERENCES users (did) ON DELETE CASCADE
     );
     
     CREATE TABLE IF NOT EXISTS queued_images (

@@ -1,4 +1,4 @@
-import { requireUser } from "~/lib/session.server";
+import { requireUser } from "~/auth/session.server";
 import type { Route } from "./+types/api.posting-schedules";
 import { updatePostingSchedules } from "~/db/posting-schedule-database.server";
 import type { ProposedCronSchedule, User } from "~/model/model";

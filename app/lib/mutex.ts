@@ -16,3 +16,14 @@ export function getMutex(purpose: string, uniqueKey: string): Mutex {
 
   return mutexes.get(key)!;
 }
+
+// Clean up old mutexes every 5 minutes
+setTimeout(() => {
+  for (const [key, mutex] of mutexes.entries()) {
+    if (mutex.isLocked()) {
+      continue;
+    }
+
+    mutexes.delete(key);
+  }
+}, 5 * 60 * 1000);

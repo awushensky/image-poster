@@ -1,6 +1,6 @@
 import { redirect } from 'react-router';
-import { handleAuthCallback } from '~/lib/bluesky-auth.server';
-import { createUserSession } from '~/lib/session.server';
+import { handleAuthCallback } from '~/auth/bluesky-auth.server';
+import { createUserSession } from '~/auth/session.server';
 import type { Route } from './+types/auth.callback';
 
 export async function loader({ request }: Route.LoaderArgs) {

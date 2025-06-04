@@ -1,4 +1,4 @@
-import { getOAuthClient } from '~/lib/bluesky-auth.server';
+import { getOAuthClient } from '~/auth/bluesky-auth.server';
 import type { Route } from './+types/jwks.json';
 
 export async function loader({}: Route.LoaderArgs) {

@@ -1,6 +1,6 @@
 import { fileStorage } from "~/lib/image-storage.server";
 import type { Route } from "./+types/api.image";
-import { requireUser } from "~/lib/session.server";
+import { requireUser } from "~/auth/session.server";
 import { createImageQueueEntry, deleteFromImageQueue, getImageQueueForUser, readImageQueueEntry, reorderImageInQueue, updateImageQueueEntry } from "~/db/image-queue-database.server";
 import type { QueuedImage, User } from "~/model/model";
 import { FileUpload, parseFormData, type FileUploadHandler } from "@mjackson/form-data-parser";

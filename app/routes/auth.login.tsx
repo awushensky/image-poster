@@ -1,5 +1,5 @@
 import { Form, redirect } from 'react-router';
-import { createAuthUrl } from '~/lib/bluesky-auth.server';
+import { createAuthUrl } from '~/auth/bluesky-auth.server';
 import type { Route } from './+types/auth.login';
 
 export async function action({ request }: Route.ActionArgs) {

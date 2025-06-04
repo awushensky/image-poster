@@ -1,4 +1,4 @@
-import { requireUser } from "~/lib/session.server";
+import { requireUser } from "~/auth/session.server";
 import type { Route } from "./+types/api.user";
 import type { User } from "~/model/model";
 import { createOrUpdateUser } from "~/db/user-database.server";
