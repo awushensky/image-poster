@@ -1,19 +1,17 @@
 import ScheduleSummary from "~/components/scheduling/schedule-summary";
 import type { Route } from "./+types/dashboard";
 import { requireUser } from "~/lib/session.server";
-import ImageUpload from "~/components/image-upload";
-import uploadHandler from "~/lib/upload-handler.server";
-import { parseFormData } from "@mjackson/form-data-parser";
 import { getImageQueueForUser } from "~/db/image-queue-database.server";
 import ImageQueue from "~/components/image-queue/image-queue";
 import Header from "~/components/header";
 import { useState } from "react";
 import Modal from "~/components/modal";
 import { estimateImageSchedule } from "~/lib/posting-time-estimator";
-import { useFetcher } from "react-router";
+import { useFetcher, useRevalidator } from "react-router";
 import type { ProposedCronSchedule } from "~/model/model";
 import { getUserPostingSchedules } from "~/db/posting-schedule-database.server";
 import ScheduleModalContent from "~/components/scheduling/schedule-modal-content";
+import UploadModal from "~/components/image-upload/upload-modal";
 
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -24,17 +22,11 @@ export async function loader({ request }: Route.LoaderArgs) {
   return { user, schedules, images };
 }
 
-export async function action({ request }: Route.ActionArgs) {
-  const user = await requireUser(request);
-  await parseFormData(
-    request,
-    uploadHandler(user, 'image', /^image\//),
-  );
-}
-
 export default function Dashboard({ loaderData }: Route.ComponentProps) {
   const fetcher = useFetcher();
+  const revalidator = useRevalidator();
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [isLoading, setLoading] = useState(false);
   const { user, schedules, images } = loaderData;
 
@@ -67,6 +59,15 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
     await Promise.all(tasks);
     setScheduleModalOpen(false);
   }
+
+  const handleImagesUploaded = async () => {
+    setUploadModalOpen(false);
+    revalidator.revalidate();
+  }
+
+  const handleUploadCancel = () => {
+    setUploadModalOpen(false);
+  };
 
   const handleImagesReordered = async (storageKey: string, destinationOrder: number) => {
     setLoading(true);
@@ -117,6 +118,13 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
         </Modal>
       )}
 
+      {uploadModalOpen && (
+        <UploadModal
+          onComplete={handleImagesUploaded}
+          onCancel={handleUploadCancel}
+        />
+      )}
+
       <Header 
         user={user}
         onSettingsClick={handleSettingsOpen}
@@ -130,15 +138,29 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
           onEdit={() => setScheduleModalOpen(true)}
         />
 
-        <ImageUpload />
+        {/* Image Queue Section with Upload Button */}
+        <div className="mt-8">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Image Queue</h2>
+            <button
+              onClick={() => setUploadModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              <span>Upload Images</span>
+            </button>
+          </div>
 
-        <ImageQueue
-          images={images}
-          isLoading={isLoading}
-          onImagesReordered={handleImagesReordered}
-          onImageUpdate={handleImageUpdated}
-          onImageDelete={handleImageDelete}
-        />
+          <ImageQueue
+            images={images}
+            isLoading={isLoading}
+            onImagesReordered={handleImagesReordered}
+            onImageUpdate={handleImageUpdated}
+            onImageDelete={handleImageDelete}
+          />
+        </div>
       </main>
     </div>
   );

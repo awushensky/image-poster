@@ -8,12 +8,6 @@ export interface User {
   last_login: string;
 }
 
-export interface PostingTime {
-  hour: number;
-  minute: number;
-  day_of_week: number;
-}
-
 export interface CronSchedule {
   id: number;
   user_did: string;
@@ -40,10 +34,3 @@ export interface PostedImage {
   user_did: string;
   created_at: string;
 }
-
-export const DAYS_OF_WEEK = [
-  'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
-];
-
-export const WEEKDAYS = [1, 2, 3, 4, 5];
-export const WEEKENDS = [0, 6];

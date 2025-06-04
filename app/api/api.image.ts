@@ -1,9 +1,17 @@
 import { fileStorage } from "~/lib/image-storage.server";
 import type { Route } from "./+types/api.image";
 import { requireUser } from "~/lib/session.server";
-import { deleteFromImageQueue, getImageQueueForUser, readImageQueueEntry, reorderImageInQueue, updateImageQueueEntry } from "~/db/image-queue-database.server";
+import { createImageQueueEntry, deleteFromImageQueue, getImageQueueForUser, readImageQueueEntry, reorderImageInQueue, updateImageQueueEntry } from "~/db/image-queue-database.server";
 import type { QueuedImage, User } from "~/model/model";
+import { FileUpload, parseFormData, type FileUploadHandler } from "@mjackson/form-data-parser";
+import { createHash } from "crypto";
 
+
+function fileNameToPostText(fileName: string): string {
+  const fileNameSpaces = fileName.replaceAll('_', ' ');
+  const fileNameWithoutExtension = fileNameSpaces.substring(0, fileNameSpaces.lastIndexOf('.'));
+  return fileNameWithoutExtension;
+}
 
 /**
  * Load an image as a stream. This can be used in the `src` field of an <img> tag.
@@ -32,6 +40,44 @@ async function loadImage(images: QueuedImage[], storageKey: string): Promise<Fil
   }
 
   return file;
+}
+
+async function uploadImage(user: User, request: Request): Promise<void> {
+  const uploadHandler: FileUploadHandler = async (fileUpload: FileUpload) => {
+    if (
+      fileUpload.fieldName === 'image' &&
+      /^image\//.test(fileUpload.type)
+    ) {
+      const storageKey = createHash('sha256')
+        .update(`${user.did}-${fileUpload.name}-${Date()}`)
+        .digest('hex');
+
+      try {
+        // FileUpload objects are not meant to stick around for very long (they are
+        // streaming data from the request.body); store them as soon as possible.
+        await fileStorage.set(storageKey, fileUpload);
+        await createImageQueueEntry(user.did, storageKey, fileNameToPostText(fileUpload.name));
+
+        // Return a File for the FormData object. This is a LazyFile that knows how
+        // to access the file's content if needed (using e.g. file.stream()) but
+        // waits until it is requested to actually read anything.
+        return fileStorage.get(storageKey);
+      } catch (error) {
+        console.error('Upload error:', error);
+        return Promise.reject('Upload failed');
+      }
+    } else {
+      console.warn('Attempted to upload file with unsupported field name or type:', {
+        fieldName: fileUpload.fieldName,
+        type: fileUpload.type,
+      });
+    }
+  }
+
+  await parseFormData(
+    request,
+    uploadHandler,
+  );
 }
 
 /**
@@ -90,6 +136,10 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const images = await getImageQueueForUser(user.did)
   const { storageKey } = params;
 
+  if (!storageKey) {
+    throw new Response("Storage key is required", { status: 400 });
+  }
+
   const imageFile = await loadImage(images, storageKey);
 
   return new Response(imageFile.stream(), {
@@ -104,11 +154,22 @@ export async function action({ request, params }: Route.ActionArgs) {
   const user = await requireUser(request);
 
   switch (request.method) {
+    case 'POST':
+      await uploadImage(user, request);
+      return new Response();
     case 'PUT':
-      updateImage(user, params.storageKey, await request.formData())
+      if (!params.storageKey) {
+        throw new Response("Storage key is required", { status: 400 });
+      }
+
+      await updateImage(user, params.storageKey, await request.formData())
       return new Response();
     case 'DELETE':
-      deleteImage(user, params.storageKey);
+      if (!params.storageKey) {
+        throw new Response("Storage key is required", { status: 400 });
+      }
+
+      await deleteImage(user, params.storageKey);
       return new Response();
     default:
       throw new Response(`Unsupported method: ${request.method}`, { status: 400 });

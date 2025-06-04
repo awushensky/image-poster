@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Clock, Plus, X, Globe, PauseCircle, PlayCircle } from 'lucide-react';
 import type { CronSchedule, ProposedCronSchedule } from '~/model/model';
 import { cronToDays, cronToDescription, getNextExecutionsForMultipleSchedules, timeToCron } from '~/lib/cron-utils';
-import { commonTimezones, dayNames } from '~/lib/time-utils';
+import { commonTimezones, DAY_NAMES } from '~/lib/time-utils';
 import { DaysOfWeekInput } from './days-of-week-input';
 import { TimeInput } from './time-input';
 
@@ -160,7 +160,7 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
                     {cronToDescription(schedule.cron_expression)}
                   </span>
                   <p className={`text-sm mt-1 ${getSmallTextColor(schedule.color, schedule.active)}`}>
-                    {cronToDays(schedule.cron_expression).map(day => dayNames[day]).join(', ')}
+                    {cronToDays(schedule.cron_expression).map(day => DAY_NAMES[day]).join(', ')}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

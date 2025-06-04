@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 interface ModalProps {
   onClose: () => void;
   title: string;
+  closeEnabled?: boolean;
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   children: React.ReactNode;
 }
@@ -11,6 +12,7 @@ interface ModalProps {
 export default function Modal({
   onClose,
   title,
+  closeEnabled = true,
   size = 'lg',
   children,
 }: ModalProps) {
@@ -23,7 +25,7 @@ export default function Modal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">      
+    <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div 
@@ -36,6 +38,7 @@ export default function Modal({
               {title}
             </h2>
             <button
+              disabled={!closeEnabled}
               onClick={onClose}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >

@@ -71,16 +71,5 @@ export async function setupTables(db: SqliteDatabase) {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_did) REFERENCES users (did) ON DELETE CASCADE
     );
-    
-    CREATE TABLE IF NOT EXISTS posting_times (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_did TEXT NOT NULL,
-      hour INTEGER NOT NULL CHECK (hour >= 0 AND hour <= 23),
-      minute INTEGER NOT NULL CHECK (minute >= 0 AND minute <= 59),
-      day_of_week INTEGER NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_did) REFERENCES users (did) ON DELETE CASCADE,
-      UNIQUE(user_did, hour, minute, day_of_week)
-    );
   `);
 }

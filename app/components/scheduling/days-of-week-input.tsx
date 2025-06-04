@@ -1,4 +1,4 @@
-import { dayLabels, dayNames } from "~/lib/time-utils";
+import { DAY_LABELS, DAY_NAMES } from "~/lib/time-utils";
 
 
 interface DaysOfWeekInputProps {
@@ -24,11 +24,11 @@ export function DaysOfWeekInput({
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-2">{title}</label>
       <div className="flex gap-1">
-        {dayLabels.map((label, index) => (
+        {DAY_LABELS.map((label, index) => (
           <button
             key={index}
             onClick={() => toggleDay(index)}
-            title={dayNames[index]}
+            title={DAY_NAMES[index]}
             className={`w-8 h-8 rounded border text-xs transition-colors ${
               selectedDays.includes(index)
                 ? 'bg-blue-600 text-white border-blue-600'

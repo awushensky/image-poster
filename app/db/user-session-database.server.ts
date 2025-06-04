@@ -34,29 +34,29 @@ export async function createUserSession(userDid: string): Promise<string> {
   return sessionToken;
 }
 
-export async function getUserFromSession(session_token: string): Promise<User | undefined> {
+export async function getUserFromSession(sessionToken: string): Promise<User | undefined> {
   const db = await ensureDatabase();
   const user = await db.get(`
     SELECT u.*
     FROM user_sessions us
     JOIN users u ON us.user_did = u.did
     WHERE us.session_token = ?
-  `, [session_token]) as User | undefined;
+  `, [sessionToken]) as User | undefined;
 
   if (user) {
     await db.run(`
       UPDATE user_sessions 
       SET last_used_at = CURRENT_TIMESTAMP 
       WHERE session_token = ?
-    `, [session_token]);
+    `, [sessionToken]);
   }
   
   return user;
 }
 
-export async function deleteSessionByToken(session_token: string): Promise<void> {
+export async function deleteSessionByToken(sessionToken: string): Promise<void> {
   const db = await ensureDatabase();
-  await db.run('DELETE FROM user_sessions WHERE session_token = ?', [session_token]);
+  await db.run('DELETE FROM user_sessions WHERE session_token = ?', [sessionToken]);
 }
 
 /*********************************

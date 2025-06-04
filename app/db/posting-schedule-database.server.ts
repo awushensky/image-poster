@@ -1,6 +1,9 @@
 import type { CronSchedule, ProposedCronSchedule } from "~/model/model";
 import { ensureDatabase } from './database.server';
+import { getMutex } from "~/lib/mutex";
 
+
+const MUTEX_PURPOSE = 'posting-schedule';
 
 export async function getUserPostingSchedules(userDid: string): Promise<CronSchedule[]> {
   const db = await ensureDatabase();
@@ -49,21 +52,23 @@ export async function updatePostingSchedules(
   userDid: string,
   schedules: ProposedCronSchedule[]
 ): Promise<CronSchedule[]> {
-  const db = await ensureDatabase();
-  db.run('BEGIN TRANSACTION');
+  return getMutex(MUTEX_PURPOSE, userDid).runExclusive(async () => {
+    const db = await ensureDatabase();
+    db.run('BEGIN TRANSACTION');
 
-  try {
-    await db.run('DELETE FROM posting_schedules WHERE user_did = ?', [userDid]);
+    try {
+      await db.run('DELETE FROM posting_schedules WHERE user_did = ?', [userDid]);
 
-    let results: CronSchedule[] = [];
-    for (const schedule of schedules) {
-      results.push(await addPostingSchedule(userDid, schedule));
+      let results: CronSchedule[] = [];
+      for (const schedule of schedules) {
+        results.push(await addPostingSchedule(userDid, schedule));
+      }
+
+      await db.run('COMMIT');
+      return results;
+    } catch (error) {
+      await db.run('ROLLBACK');
+      throw error;
     }
-
-    await db.run('COMMIT');
-    return results;
-  } catch (error) {
-    await db.run('ROLLBACK');
-    throw error;
-  }
+  });
 }

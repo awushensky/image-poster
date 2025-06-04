@@ -1,6 +1,9 @@
 import type { User } from "~/model/model";
 import { ensureDatabase } from './database.server';
+import { getMutex } from "~/lib/mutex";
 
+
+const MUTEX_PURPOSE = 'user-database';
 
 export async function getUserByDid(did: string): Promise<User | undefined> {
   const db = await ensureDatabase();
@@ -14,25 +17,27 @@ export async function createOrUpdateUser(
   displayName?: string,
   avatarUrl?: string,
 ): Promise<User> {
-  const db = await ensureDatabase();
-  const existing = await getUserByDid(did);
+  return getMutex(MUTEX_PURPOSE, did).runExclusive(async () => {
+    const db = await ensureDatabase();
+    const existing = await getUserByDid(did);
 
-  if (existing) {
-    await db.run(`
-      UPDATE users
-      SET last_login = CURRENT_TIMESTAMP,
-      handle = ?,
-      timezone = ?,
-      display_name = ?,
-      avatar_url = ?
-      WHERE did = ?
-    `, [handle, timezone, displayName, avatarUrl, did]);
-    return (await getUserByDid(did))!;
-  } else {
-    await db.run(`
-      INSERT INTO users (did, handle, timezone, display_name, avatar_url)
-      VALUES (?, ?, ?, ?, ?)
-    `, [did, handle, timezone, displayName, avatarUrl]);
-    return (await getUserByDid(did))!;
-  }
+    if (existing) {
+      await db.run(`
+        UPDATE users
+        SET last_login = CURRENT_TIMESTAMP,
+        handle = ?,
+        timezone = ?,
+        display_name = ?,
+        avatar_url = ?
+        WHERE did = ?
+      `, [handle, timezone, displayName, avatarUrl, did]);
+      return (await getUserByDid(did))!;
+    } else {
+      await db.run(`
+        INSERT INTO users (did, handle, timezone, display_name, avatar_url)
+        VALUES (?, ?, ?, ?, ?)
+      `, [did, handle, timezone, displayName, avatarUrl]);
+      return (await getUserByDid(did))!;
+    }
+  });
 }

@@ -10,8 +10,8 @@ export const commonTimezones: readonly string[] = [
   'UTC'
 ];
 
-export const dayLabels: readonly string[] = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-export const dayNames: readonly string[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+export const DAY_LABELS: readonly string[] = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+export const DAY_NAMES: readonly string[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 /**
  * Gets the user's timezone from the browser

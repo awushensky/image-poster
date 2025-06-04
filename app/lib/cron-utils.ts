@@ -1,5 +1,5 @@
 import { CronExpressionParser } from 'cron-parser';
-import { dayNames } from './time-utils';
+import { DAY_NAMES } from './time-utils';
 
 /**
  * Validate a cron expression
@@ -67,7 +67,7 @@ export function cronToDescription(cron: string): string {
   const hour = parts[1];
   
   const time = `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
-  const days = cronToDays(cron).map(day => dayNames[day]);
+  const days = cronToDays(cron).map(day => DAY_NAMES[day]);
   
   if (days.length === 5 && days.every(day => !['Saturday', 'Sunday'].includes(day))) {
     return `Weekdays at ${time}`;
