@@ -23,9 +23,6 @@ export default function UploadModal({ onComplete, onCancel }: UploadModalProps) 
   const canClose = !hasActiveUploads && !isProcessing;
 
   const uploadSingleFile = useCallback(async (file: File, index: number): Promise<void> => {
-    console.log(`🚀 Starting upload for ${file.name} (${index + 1})`);
-    
-    // Mark as uploading
     setUploads(prev => prev.map((upload, i) => 
       i === index ? { ...upload, status: 'uploading' } : upload
     ));
@@ -33,36 +30,14 @@ export default function UploadModal({ onComplete, onCancel }: UploadModalProps) 
     try {
       const formData = new FormData();
       formData.append('image', file);
-
-      console.log(`📡 Making fetch request for ${file.name}...`);
       
       const response = await fetch('/api/image', {
         method: 'POST',
         body: formData,
-        headers: {
-          // Don't set Content-Type - let browser set it for FormData
-        }
       });
 
-      console.log(`📡 Response received for ${file.name}:`, {
-        status: response.status,
-        statusText: response.statusText,
-        url: response.url,
-        redirected: response.redirected,
-        type: response.type,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-
-      // Check if response is actually JSON
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        const textResponse = await response.text();
-        console.error(`❌ Non-JSON response for ${file.name}:`, {
-          contentType,
-          status: response.status,
-          body: textResponse.substring(0, 500) + (textResponse.length > 500 ? '...' : '')
-        });
-        
         setUploads(prev => prev.map((upload, i) => 
           i === index 
             ? { ...upload, status: 'error', error: `Server returned ${contentType || 'unknown'} instead of JSON` }
@@ -72,11 +47,8 @@ export default function UploadModal({ onComplete, onCancel }: UploadModalProps) 
       }
 
       const result = await response.json();
-      console.log(`📦 Parsed JSON for ${file.name}:`, result);
 
       if (result.success) {
-        console.log(`✅ Upload completed for ${file.name}`, result);
-        
         setUploads(prev => prev.map((upload, i) => 
           i === index 
             ? { ...upload, progress: 100, status: 'completed' }
@@ -84,8 +56,6 @@ export default function UploadModal({ onComplete, onCancel }: UploadModalProps) 
         ));
       } else {
         const errorMessage = result.error || 'Upload failed';
-        console.error(`❌ Upload failed for ${file.name}:`, errorMessage);
-        
         setUploads(prev => prev.map((upload, i) => 
           i === index 
             ? { ...upload, status: 'error', error: errorMessage }
@@ -94,8 +64,6 @@ export default function UploadModal({ onComplete, onCancel }: UploadModalProps) 
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Network error';
-      console.error(`❌ Upload failed for ${file.name}:`, error);
-      
       setUploads(prev => prev.map((upload, i) => 
         i === index 
           ? { ...upload, status: 'error', error: errorMessage }
@@ -108,33 +76,26 @@ export default function UploadModal({ onComplete, onCancel }: UploadModalProps) 
     setIsProcessing(true);
     
     try {
-      // Process uploads sequentially with a small delay between each
       for (let i = 0; i < files.length; i++) {
-        console.log(`⏳ About to upload file ${i + 1}/${files.length}`);
         await uploadSingleFile(files[i], i);
-        console.log(`✅ Finished uploading file ${i + 1}/${files.length}`);
         
         // Small delay between uploads to prevent overwhelming the server
         if (i < files.length - 1) {
-          console.log(`⏱️ Waiting 200ms before next upload...`);
           await new Promise(resolve => setTimeout(resolve, 200));
         }
       }
       
       setIsProcessing(false);
-      console.log('🎉 All uploads processed, calling onComplete');
-      onComplete();
     } catch (error) {
       console.error('Upload process failed:', error);
       setIsProcessing(false);
     }
-  }, [uploadSingleFile, onComplete]);
+  }, [uploadSingleFile]);
 
   async function handleFilesSelected(fileList: FileList) {
     const files = Array.from(fileList);
     setHasStarted(true);
     
-    // Initialize upload progress for all files
     const newUploads: UploadProgress[] = files.map(file => ({
       file,
       progress: 0,
@@ -142,9 +103,6 @@ export default function UploadModal({ onComplete, onCancel }: UploadModalProps) 
     }));
     
     setUploads(newUploads);
-    console.log(`📦 Starting upload of ${files.length} files`);
-    
-    // Start processing uploads
     processUploads(files);
   }
 
@@ -175,14 +133,6 @@ export default function UploadModal({ onComplete, onCancel }: UploadModalProps) 
           <h3 className="font-medium text-sm text-gray-700">
             Upload Progress ({completedCount}/{uploads.length})
           </h3>
-          
-          {/* Debug info */}
-          <div className="text-xs text-gray-500">
-            Uploading: {uploadingCount} | 
-            Pending: {pendingCount} | 
-            Completed: {completedCount} |
-            Errors: {uploads.filter(u => u.status === 'error').length}
-          </div>
           
           <div className="max-h-40 overflow-y-auto space-y-2">
             {uploads.map((upload, index) => (

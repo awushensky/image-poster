@@ -12,5 +12,19 @@ export default defineConfig({
     allowedHosts: [
       'image-poster.luminblaz.dev',
     ],
+    watch: {
+      ignored: (path) => {
+        if (path.includes('.db') || path.includes('.db-wal') || path.includes('.db-shm')) {
+          return true;
+        }
+        if (path.includes('/data/') || path.includes('\\data\\')) {
+          return true;
+        }
+        if (path.includes('node_modules')) {
+          return true;
+        }
+        return false;
+      }
+    }
   },
 });

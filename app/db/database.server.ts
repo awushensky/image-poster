@@ -76,7 +76,6 @@ export async function useDatabase<T>(
         throw error;
       }
     } finally {
-      // Only release if we haven't already released it due to error
       if (db) {
         await releaseDatabase(db, false);
       }
@@ -94,13 +93,7 @@ export async function ensureDatabase(): Promise<SqliteDatabase> {
 }
 
 export async function releaseDatabase(db: SqliteDatabase, forceClose: boolean = false): Promise<void> {
-  if (!_pool) {
-    console.warn('⚠️ Trying to release connection but no pool exists');
-    return;
-  }
-  
-  if (!_pool.inUse.has(db)) {
-    console.warn('⚠️ Trying to release connection that was not in use');
+  if (!_pool || !_pool.inUse.has(db)) {
     return;
   }
   
@@ -116,13 +109,11 @@ export async function releaseDatabase(db: SqliteDatabase, forceClose: boolean = 
     
     try {
       await db.close();
-      console.log(`🔴 Closed corrupted connection. Pool: ${_pool.available.length} available, ${_pool.inUse.size} in use`);
     } catch (error) {
       console.error('Error closing database connection:', error);
     }
   } else {
     _pool.available.push(db);
-    console.log(`🔓 Released connection. Pool: ${_pool.available.length} available, ${_pool.inUse.size} in use`);
   }
 }
 
@@ -139,19 +130,12 @@ async function initDatabasePool(): Promise<DatabasePool> {
   // Create all initial connections upfront to avoid creation delays
   console.log(`🏊 Initializing pool with ${POOL_SIZE} connections...`);
   for (let i = 0; i < POOL_SIZE; i++) {
-    try {
-      const db = await createConnection();
-      pool.connections.push(db);
-      pool.available.push(db);
-      pool.currentConnections++;
-      console.log(`✅ Created connection ${i + 1}/${POOL_SIZE}`);
-    } catch (error) {
-      console.error(`❌ Failed to create connection ${i + 1}:`, error);
-      throw error;
-    }
+    const db = await createConnection();
+    pool.connections.push(db);
+    pool.available.push(db);
+    pool.currentConnections++;
   }
 
-  console.log(`🏊 Pool initialized with ${pool.currentConnections} connections`);
   return pool;
 }
 
@@ -160,20 +144,13 @@ async function createConnection(): Promise<SqliteDatabase> {
     filename: './data/app.db',
     driver: Database.Database
   });
-
-  console.log('Configuring SQLite connection...');
   
   try {
     // Enable WAL mode first - this is crucial for concurrency
-    const walResult = await db.run('PRAGMA journal_mode = WAL;');
-    console.log('WAL mode set:', walResult);
+    await db.run('PRAGMA journal_mode = WAL;');
     
     // Configure busy timeout BEFORE other settings
     await db.run('PRAGMA busy_timeout = 30000;'); // 30 seconds
-    
-    // Verify busy timeout was set
-    const timeoutCheck = await db.get('PRAGMA busy_timeout;');
-    console.log('Busy timeout set to:', timeoutCheck);
     
     // Other performance settings
     await db.run('PRAGMA synchronous = NORMAL;');
@@ -184,19 +161,6 @@ async function createConnection(): Promise<SqliteDatabase> {
     
     // Critical: Ensure normal locking mode (not exclusive)
     await db.run('PRAGMA locking_mode = NORMAL;');
-    
-    // Final verification of key settings
-    const [mode, timeout, locking] = await Promise.all([
-      db.get('PRAGMA journal_mode;'),
-      db.get('PRAGMA busy_timeout;'),
-      db.get('PRAGMA locking_mode;')
-    ]);
-    
-    console.log(`SQLite configured: journal_mode=${mode?.journal_mode}, busy_timeout=${timeout?.busy_timeout}, locking_mode=${locking?.locking_mode}`);
-    
-    // Verify the database file is accessible
-    await db.get('SELECT 1 as test;');
-    console.log('Database connection test passed');
     
   } catch (error) {
     console.error('Error configuring SQLite connection:', error);
@@ -215,25 +179,20 @@ async function getConnection(pool: DatabasePool): Promise<SqliteDatabase> {
     throw new Error('Database pool is shutting down');
   }
   
-  console.log(`🔗 Pool status: ${pool.available.length} available, ${pool.inUse.size} in use, ${pool.currentConnections} total`);
-  
   // If there's an available connection, use it
   if (pool.available.length > 0) {
     const db = pool.available.pop()!;
     pool.inUse.add(db);
-    console.log(`✅ Using existing connection. Pool: ${pool.available.length} available, ${pool.inUse.size} in use`);
     return db;
   }
 
   // If we can create more connections, create one
   if (pool.currentConnections < pool.maxConnections) {
-    console.log(`🆕 Creating new connection (${pool.currentConnections + 1}/${pool.maxConnections})`);
     try {
       const db = await createConnection();
       pool.connections.push(db);
       pool.inUse.add(db);
       pool.currentConnections++;
-      console.log(`✅ Created new connection. Pool: ${pool.available.length} available, ${pool.inUse.size} in use`);
       return db;
     } catch (error) {
       console.error('Failed to create new connection:', error);
@@ -242,20 +201,12 @@ async function getConnection(pool: DatabasePool): Promise<SqliteDatabase> {
   }
 
   // Wait for a connection to become available
-  console.log(`⏳ Pool exhausted, waiting for connection...`);
   return new Promise((resolve, reject) => {
     const startTime = Date.now();
-    const timeout = 5000; // Reduced to 5 seconds to fail fast
+    const timeout = 5000;
     
     const checkForConnection = () => {
       if (Date.now() - startTime > timeout) {
-        console.error(`❌ Pool timeout after ${timeout}ms! Available: ${pool.available.length}, In use: ${pool.inUse.size}, Total: ${pool.currentConnections}`);
-        console.error(`❌ Pool connections breakdown:`, {
-          available: pool.available.length,
-          inUse: pool.inUse.size,
-          total: pool.currentConnections,
-          maxConnections: pool.maxConnections
-        });
         reject(new Error(`Database pool timeout after ${timeout}ms - no connections available`));
         return;
       }
@@ -263,32 +214,26 @@ async function getConnection(pool: DatabasePool): Promise<SqliteDatabase> {
       if (pool.available.length > 0) {
         const db = pool.available.pop()!;
         pool.inUse.add(db);
-        console.log(`✅ Got connection after waiting ${Date.now() - startTime}ms. Pool: ${pool.available.length} available, ${pool.inUse.size} in use`);
         resolve(db);
       } else {
-        // Check again in 50ms
         setTimeout(checkForConnection, 50);
       }
     };
+
     checkForConnection();
   });
 }
 
-// Add graceful shutdown
 export async function shutdownPool(): Promise<void> {
   if (!_pool) return;
-  
-  console.log('🛑 Shutting down database pool...');
   _pool.isShuttingDown = true;
   
-  // Wait for all connections to be released
   let attempts = 0;
   while (_pool.inUse.size > 0 && attempts < 100) {
     await new Promise(resolve => setTimeout(resolve, 100));
     attempts++;
   }
   
-  // Close all connections
   for (const db of _pool.connections) {
     try {
       await db.close();
@@ -298,11 +243,9 @@ export async function shutdownPool(): Promise<void> {
   }
   
   _pool = undefined;
-  console.log('✅ Database pool shut down');
 }
 
 export async function setupTables(db: SqliteDatabase) {
-  // Wrap table creation in a transaction for atomicity
   await db.exec('BEGIN TRANSACTION;');
   
   try {

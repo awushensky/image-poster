@@ -7,7 +7,7 @@ import Header from "~/components/header";
 import { useState } from "react";
 import Modal from "~/components/modal";
 import { estimateImageSchedule } from "~/lib/posting-time-estimator";
-import { useFetcher, useRevalidator } from "react-router";
+import { useRevalidator } from "react-router";
 import type { ProposedPostingSchedule } from "~/model/model";
 import { getUserPostingSchedules } from "~/db/posting-schedule-database.server";
 import ScheduleModalContent from "~/components/scheduling/schedule-modal-content";
@@ -77,18 +77,15 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
 
     try {
       await Promise.all(tasks);
-      console.log('✅ Schedule and timezone updated successfully');
       setScheduleModalOpen(false);
       revalidator.revalidate();
     } catch (error) {
       console.error('Failed to save schedule changes:', error);
-      // Could show an error toast here instead of just logging
-      // For now, we'll still close the modal, but you might want to keep it open on error
+      // Could show an error toast here
     }
   }
 
   const handleImagesUploaded = async () => {
-    console.log('🎉 Images uploaded successfully, closing modal and revalidating');
     setUploadModalOpen(false);
     revalidator.revalidate();
   }
@@ -97,7 +94,6 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
     setUploadModalOpen(false);
   };
 
-  // Replace fetcher.submit with regular fetch calls to prevent navigation
   const handleImagesReordered = async (storageKey: string, destinationOrder: number) => {
     setLoading(true);
     try {
@@ -116,8 +112,6 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
         console.error('Failed to reorder image:', result.error);
         // Could show an error toast here
       } else {
-        console.log('✅ Image reordered successfully');
-        // Manually revalidate to refresh the UI
         revalidator.revalidate();
       }
     } catch (error) {
@@ -152,8 +146,6 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
         console.error('Failed to update image:', result.error);
         // Could show an error toast here
       } else {
-        console.log('✅ Image updated successfully');
-        // Manually revalidate to refresh the UI
         revalidator.revalidate();
       }
     } catch (error) {
@@ -177,8 +169,6 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
         console.error('Failed to delete image:', result.error);
         // Could show an error toast here
       } else {
-        console.log('✅ Image deleted successfully');
-        // Manually revalidate to refresh the UI
         revalidator.revalidate();
       }
     } catch (error) {
