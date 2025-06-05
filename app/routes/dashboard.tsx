@@ -4,7 +4,7 @@ import { requireUser } from "~/auth/session.server";
 import { getImageQueueForUser } from "~/db/image-queue-database.server";
 import ImageQueue from "~/components/image-queue/image-queue";
 import Header from "~/components/header";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Modal from "~/components/modal";
 import { estimateImageSchedule } from "~/lib/posting-time-estimator";
 import { useRevalidator } from "react-router";
@@ -12,21 +12,28 @@ import type { ProposedPostingSchedule } from "~/model/model";
 import { getUserPostingSchedules } from "~/db/posting-schedule-database.server";
 import ScheduleModalContent from "~/components/scheduling/schedule-modal-content";
 import UploadModal from "~/components/image-upload/upload-modal";
+import { deleteImage, reorderImages } from "~/lib/dashboard-utils";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
   const schedules = await getUserPostingSchedules(user.did);
-  const images = await estimateImageSchedule(await getImageQueueForUser(user.did), schedules, user.timezone);
+  const loadedImages = await estimateImageSchedule(await getImageQueueForUser(user.did), schedules, user.timezone);
   
-  return { user, schedules, images };
+  return { user, schedules, loadedImages };
 }
 
 export default function Dashboard({ loaderData }: Route.ComponentProps) {
+  const { user, schedules, loadedImages } = loaderData
+
   const revalidator = useRevalidator();
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
-  const [isLoading, setLoading] = useState(false);
-  const { user, schedules, images } = loaderData;
+  const [images, setImages] = useState(loadedImages);
+
+  useEffect(() => {
+    // Reset state whenever loader data changes
+    setImages(loadedImages);
+  }, [loaderData]);
 
   const handleSettingsOpen = () => {
     setScheduleModalOpen(true);
@@ -95,35 +102,30 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
   };
 
   const handleImagesReordered = async (storageKey: string, destinationOrder: number) => {
-    setLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append('action', 'reorder');
-      formData.append('toOrder', destinationOrder.toString());
+    // reorder the images without the reload. this will make the UI feel more responsive.
+    setImages(estimateImageSchedule(reorderImages(images, storageKey, destinationOrder), schedules, user.timezone));
 
-      const response = await fetch(`/api/image/${storageKey}`, {
-        method: 'PUT',
-        body: formData,
-      });
+    const formData = new FormData();
+    formData.append('action', 'reorder');
+    formData.append('toOrder', destinationOrder.toString());
 
+    fetch(`/api/image/${storageKey}`, {
+      method: 'PUT',
+      body: formData,
+    }).then(async response => {
       const result = await response.json();
       
       if (!result.success) {
         console.error('Failed to reorder image:', result.error);
+        revalidator.revalidate();
         // Could show an error toast here
       } else {
         revalidator.revalidate();
       }
-    } catch (error) {
-      console.error('Failed to reorder image:', error);
-      // Could show an error toast here
-    } finally {
-      setLoading(false);
-    }
+    });
   }
 
   const handleImageUpdated = async (storageKey: string, update: Partial<{ postText: string, isNsfw: boolean }>) => {
-    setLoading(true);
     try {
       const formData = new FormData();
       formData.append('action', 'update');
@@ -146,37 +148,28 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
         console.error('Failed to update image:', result.error);
         // Could show an error toast here
       } else {
-        revalidator.revalidate();
+        // revalidator.revalidate();
       }
     } catch (error) {
       console.error('Failed to update image:', error);
       // Could show an error toast here
-    } finally {
-      setLoading(false);
     }
   }
 
   const handleImageDelete = async (storageKey: string) => {
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/image/${storageKey}`, {
-        method: 'DELETE',
-      });
+    setImages(estimateImageSchedule(deleteImage(images, storageKey), schedules, user.timezone));
 
+    fetch(`/api/image/${storageKey}`, {
+      method: 'DELETE',
+    }).then(async response => {
       const result = await response.json();
-      
       if (!result.success) {
         console.error('Failed to delete image:', result.error);
         // Could show an error toast here
       } else {
-        revalidator.revalidate();
+        // revalidator.revalidate();
       }
-    } catch (error) {
-      console.error('Failed to delete image:', error);
-      // Could show an error toast here
-    } finally {
-      setLoading(false);
-    }
+    });
   }
 
   const handleLogout = () => {
@@ -235,7 +228,6 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
 
           <ImageQueue
             images={images}
-            isLoading={isLoading}
             onImagesReordered={handleImagesReordered}
             onImageUpdate={handleImageUpdated}
             onImageDelete={handleImageDelete}

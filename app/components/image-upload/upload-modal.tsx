@@ -86,6 +86,7 @@ export default function UploadModal({ onComplete, onCancel }: UploadModalProps) 
       }
       
       setIsProcessing(false);
+      onComplete();
     } catch (error) {
       console.error('Upload process failed:', error);
       setIsProcessing(false);

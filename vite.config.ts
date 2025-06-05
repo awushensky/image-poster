@@ -20,6 +20,9 @@ export default defineConfig({
         if (path.includes('/data/') || path.includes('\\data\\')) {
           return true;
         }
+        if (path.includes('uploads/images') || path.includes('\\uploads\\images\\')) {
+          return true;
+        }
         if (path.includes('node_modules')) {
           return true;
         }
