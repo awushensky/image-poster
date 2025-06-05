@@ -3,16 +3,16 @@ import ScheduleChart from "./schedule-chart";
 
 
 interface ScheduleSummaryProps {
-  user: User;
   schedules: ProposedPostingSchedule[];
+  timezone: string;
   onEdit?: () => void;
 }
 
-const ScheduleSummary: React.FC<ScheduleSummaryProps> = ({ user, schedules, onEdit }) => {
+const ScheduleSummary: React.FC<ScheduleSummaryProps> = ({ schedules, timezone, onEdit }) => {
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Posting Schedule - {user.timezone}</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Posting Schedule - {timezone}</h3>
         {onEdit === undefined ?
           <></>
           :
@@ -28,7 +28,7 @@ const ScheduleSummary: React.FC<ScheduleSummaryProps> = ({ user, schedules, onEd
       {schedules.length <= 0 ? (
         <p className="text-gray-500">No posting schedule configured</p>
       ) : (
-        <ScheduleChart user={user} schedules={schedules} />
+        <ScheduleChart schedules={schedules} timezone={timezone} />
       )}
     </div>
   );

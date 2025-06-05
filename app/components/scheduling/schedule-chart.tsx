@@ -1,46 +1,59 @@
 import React, { useState, useEffect } from 'react';
-import type { ProposedPostingSchedule, User } from "~/model/model";
+import type { ProposedPostingSchedule } from "~/model/model";
 import { cronToDescription, cronToTime } from "~/lib/cron-utils";
+import { DAY_NAMES, formatTime, getCurrentTimeInTimezone as getTimeInTimezone } from '~/lib/time-utils';
 
 interface ScheduleChartProps {
   schedules: ProposedPostingSchedule[];
-  user: User;
+  timezone: string;
 }
 
-interface ParsedSchedule {
+interface PostingTime {
   schedule: ProposedPostingSchedule;
   day_of_week: number;
   hour: number;
   minute: number;
 }
 
-interface GroupedSchedule {
+interface GroupedPostingTimes {
   day_of_week: number;
   hour: number;
   minute: number;
   schedules: ProposedPostingSchedule[];
-  count: number;
 }
 
-const ScheduleChart: React.FC<ScheduleChartProps> = ({ schedules }) => {
+function groupPostingTimes(postingTimes: PostingTime[]): GroupedPostingTimes[] {
+  const grouped = postingTimes.reduce((acc, item) => {
+    const key = `${item.day_of_week}-${item.hour}-${item.minute}`;
+    
+    if (!acc.has(key)) {
+      acc.set(key, {
+        day_of_week: item.day_of_week,
+        hour: item.hour,
+        minute: item.minute,
+        schedules: [item.schedule],
+      });
+    } else {
+      acc.get(key)!.schedules.push(item.schedule);
+    }
+    
+    return acc;
+  }, new Map<string, GroupedPostingTimes>());
+
+  return Array.from(grouped.values());
+}
+
+const ScheduleChart: React.FC<ScheduleChartProps> = ({ schedules, timezone }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
-  
-  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
   // Update current time every minute
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(new Date());
-    }, 60000); // Update every minute
+    }, 60000);
 
     return () => clearInterval(interval);
   }, []);
-
-  const formatTime = (hour: number, minute: number): string => {
-    const displayHour = hour.toString().padStart(2, '0');
-    const displayMinute = minute.toString().padStart(2, '0');
-    return `${displayHour}:${displayMinute}`;
-  };
 
   const getColorClass = (color: string): string => {
     const colorMap: Record<string, string> = {
@@ -54,45 +67,22 @@ const ScheduleChart: React.FC<ScheduleChartProps> = ({ schedules }) => {
     return colorMap[color] || 'bg-gray-600 hover:bg-gray-700';
   };
 
-  // Parse and filter schedules
-  const parsedSchedules: ParsedSchedule[] = schedules
-    .filter(schedule => schedule.active) // Only show active schedules
+  const postingTimes: PostingTime[] = schedules
+    .filter(schedule => schedule.active)
     .flatMap(schedule => {
-      const parsedInstances = cronToTime(schedule.cron_expression);
-      return parsedInstances.map(instance => ({
+      const postingTime = cronToTime(schedule.cron_expression);
+      return postingTime.map(instance => ({
         schedule,
         ...instance
       }));
     });
 
-  // Group overlapping schedules
-  const groupedSchedules: GroupedSchedule[] = [];
-  const groupMap = new Map<string, GroupedSchedule>();
+  const groupedPostingTimes = groupPostingTimes(postingTimes);
 
-  parsedSchedules.forEach(({ schedule, day_of_week, hour, minute }) => {
-    const key = `${day_of_week}-${hour}-${minute}`;
-    if (groupMap.has(key)) {
-      const group = groupMap.get(key)!;
-      group.schedules.push(schedule);
-      group.count++;
-    } else {
-      const group: GroupedSchedule = {
-        day_of_week,
-        hour,
-        minute,
-        schedules: [schedule],
-        count: 1
-      };
-      groupMap.set(key, group);
-      groupedSchedules.push(group);
-    }
-  });
-
-  // Calculate current time position
-  const currentHour = currentTime.getHours();
-  const currentMinute = currentTime.getMinutes();
+  // Calculate current time position in the specified timezone
+  const { hours: currentHour, minutes: currentMinute, dayOfWeek: currentDay } = getTimeInTimezone(currentTime, timezone);
   const currentTimePosition = ((currentHour + currentMinute / 60) / 24) * 100;
-  const currentDayYPosition = ((6 - currentTime.getDay()) / 7) * 100;
+  const currentDayYPosition = ((6 - currentDay) / 7) * 100;
 
   return (
     <div className="relative">
@@ -112,7 +102,7 @@ const ScheduleChart: React.FC<ScheduleChartProps> = ({ schedules }) => {
                   transform: 'translateY(-50%)'
                 }}
               >
-                {dayNames[dayNum].slice(0, 3)}
+                {DAY_NAMES[dayNum].slice(0, 3)}
               </div>
             );
           })}
@@ -154,7 +144,7 @@ const ScheduleChart: React.FC<ScheduleChartProps> = ({ schedules }) => {
           
           {/* Chart plotting area */}
           <div className="relative h-32">
-            {groupedSchedules.map((group, index) => {
+            {groupedPostingTimes.map((group, index) => {
               const xPosition = ((group.hour + group.minute / 60) / 24) * 100;
               const yPosition = ((6 - group.day_of_week) / 7) * 100 + (100 / 14); // Center in row
               
@@ -173,22 +163,22 @@ const ScheduleChart: React.FC<ScheduleChartProps> = ({ schedules }) => {
                   }}
                 >
                   <div className={`w-2.5 h-2.5 ${colorClass} rounded-full border border-white shadow-sm hover:scale-125 transition-all cursor-pointer relative`}>
-                    {group.count > 1 && (
+                    {group.schedules.length > 1 && (
                       <div className="absolute -top-1 -right-1 bg-yellow-400 text-black text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold text-[10px]">
-                        {group.count}
+                        {group.schedules.length}
                       </div>
                     )}
                   </div>
                   {/* Tooltip */}
                   <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 max-w-xs">
-                    {group.count === 1 ? (
+                    {group.schedules.length === 1 ? (
                       <>
-                        {dayNames[group.day_of_week]} {formatTime(group.hour, group.minute)}
+                        {DAY_NAMES[group.day_of_week]} {formatTime(group.hour, group.minute)}
                       </>
                     ) : (
                       <div className="space-y-1">
                         <div className="font-semibold">
-                          {dayNames[group.day_of_week]} {formatTime(group.hour, group.minute)}
+                          {DAY_NAMES[group.day_of_week]} {formatTime(group.hour, group.minute)}
                         </div>
                         <div className="text-xs">
                           {group.schedules.map((schedule, idx) => (

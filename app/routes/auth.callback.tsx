@@ -7,7 +7,6 @@ export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const params = new URLSearchParams(url.search);
 
-  // Check for OAuth errors
   const error = params.get('error');
   if (error) {
     const errorDescription = params.get('error_description');
@@ -21,7 +20,6 @@ export async function loader({ request }: Route.LoaderArgs) {
     return redirect(redirectUrl);
   }
 
-  // Check for required OAuth parameters
   const code = params.get('code');
   const state = params.get('state');
   
@@ -34,8 +32,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     const { user, state: returnedState } = await handleAuthCallback(params);
     console.log('User authenticated successfully:', user.did, 'State:', returnedState);
     
-    // Create session and redirect to main page
-    return createUserSession(user.did, '/');
+    return await createUserSession(user.did, '/');
   } catch (error) {
     console.error('Auth callback error:', error);
     

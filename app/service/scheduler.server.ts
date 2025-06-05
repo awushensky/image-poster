@@ -86,7 +86,7 @@ class ImageScheduler {
       }
 
       // Look for the next occurrence after checkTime
-      const nextOccurrence = getNextExecution(schedule.cron_expression, schedule.timezone);
+      const nextOccurrence = getNextExecution(schedule.cron_expression, schedule.timezone, checkTime);
       
       // If the next occurrence is before currentCheck, it should have triggered
       return nextOccurrence <= currentCheck && nextOccurrence > checkTime;

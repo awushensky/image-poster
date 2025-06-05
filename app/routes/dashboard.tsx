@@ -17,7 +17,7 @@ import UploadModal from "~/components/image-upload/upload-modal";
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
   const schedules = await getUserPostingSchedules(user.did);
-  const images = await estimateImageSchedule(await getImageQueueForUser(user.did), schedules);
+  const images = await estimateImageSchedule(await getImageQueueForUser(user.did), schedules, user.timezone);
   
   return { user, schedules, images };
 }
@@ -133,8 +133,8 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
 
       <main className={`max-w-7xl mx-auto p-6`}>
         <ScheduleSummary
-          user={user}
           schedules={schedules}
+          timezone={user.timezone}
           onEdit={() => setScheduleModalOpen(true)}
         />
 

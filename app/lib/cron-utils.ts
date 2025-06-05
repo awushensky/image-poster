@@ -92,8 +92,8 @@ export function cronToDays(cron: string): number[] {
   return dayOfWeek.split(',').map(d => parseInt(d));
 }
 
-export function getPreviousExecution(cronExpression: string, timezone: string): Date {
-  const interval = CronExpressionParser.parse(cronExpression, { tz: timezone });
+export function getPreviousExecution(cronExpression: string, timezone: string, referenceDate?: Date): Date {
+  const interval = CronExpressionParser.parse(cronExpression, { tz: timezone, currentDate: referenceDate });
   return interval.prev().toDate();
 }
 
@@ -103,8 +103,8 @@ export function getPreviousExecution(cronExpression: string, timezone: string): 
  * @param timezone the timezone in which to evaluate the cron expression
  * @returns the next execution time as a Date object
  */
-export function getNextExecution(cronExpression: string, timezone: string): Date {
-  const interval = CronExpressionParser.parse(cronExpression, { tz: timezone });
+export function getNextExecution(cronExpression: string, timezone: string, referenceDate?: Date): Date {
+  const interval = CronExpressionParser.parse(cronExpression, { tz: timezone, currentDate: referenceDate });
   return interval.next().toDate();
 }
 

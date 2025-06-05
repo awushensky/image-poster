@@ -28,7 +28,7 @@ export async function setupTables(db: SqliteDatabase) {
       handle TEXT NOT NULL,
       display_name TEXT,
       avatar_url TEXT,
-      timezone TEXT NOT NULL,
+      timezone TEXT NOT NULL CHECK (timezone IN ('America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Moscow', 'Asia/Tokyo', 'Australia/Sydney', 'Etc/UTC')),
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       last_login DATETIME DEFAULT CURRENT_TIMESTAMP
     );

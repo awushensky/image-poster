@@ -9,6 +9,7 @@ export interface ImageWithEstimatedUpload extends QueuedImage {
 export function estimateImageSchedule(
   queuedImages: QueuedImage[],
   schedules: PostingSchedule[],
+  timezone: string,
 ): ImageWithEstimatedUpload[] {
   if (!queuedImages.length || !schedules.length) {
     return queuedImages.map(image => ({
@@ -19,7 +20,7 @@ export function estimateImageSchedule(
 
   const executionDates = getNextExecutionsForMultipleSchedules(
     schedules.map(schedule => schedule.cron_expression),
-    schedules[0].user_did,
+    timezone,
     queuedImages.length
   )
 
