@@ -6,6 +6,7 @@ import type { ProposedPostingSchedule, User } from "~/model/model";
 async function updateSchedules(user: User, formData: FormData) {
   const formDataEntry = formData.get("schedules");
   if (!formDataEntry) {
+    console.log('Error parsing update, no "schedule" parameter found');
     throw new Response("Invalid updated schedule", {
       status: 400,
     });
@@ -15,6 +16,7 @@ async function updateSchedules(user: User, formData: FormData) {
     const schedule = JSON.parse(formDataEntry.toString()) as ProposedPostingSchedule[];
     return await updatePostingSchedules(user.did, schedule);
   } catch (error) {
+    console.log('Error parsing update', error);
     throw new Response("Invalid schedule format", {
       status: 400,
     });

@@ -1,6 +1,6 @@
 import type { QueuedImage } from "~/model/model";
-import { ensureDatabase } from "./database.server";
 import { getMutex } from "~/lib/mutex";
+import { useDatabase } from "./database.server";
 
 
 const MUTEX_PURPOSE = 'image-queue';
@@ -10,11 +10,7 @@ export async function createImageQueueEntry(
   storageKey: string,
   postText: string
 ): Promise<QueuedImage> {
-  const mutex = getMutex(MUTEX_PURPOSE, userDid);
-  return mutex.runExclusive(async () => {
-    console.log('Got mutex for user:', mutex, userDid);
-    const db = await ensureDatabase();
-    
+  return await getMutex(MUTEX_PURPOSE, userDid).runExclusive(async () => await useDatabase(async db => {
     await db.run('BEGIN TRANSACTION');
 
     try {
@@ -36,21 +32,22 @@ export async function createImageQueueEntry(
     }
     
     return await readImageQueueEntry(userDid, storageKey);
-  });
+  }));
 }
 
 export async function readImageQueueEntry(userDid: string, storageKey: string): Promise<QueuedImage> {
-  const db = await ensureDatabase();
-  const image = await db.get(
-    'SELECT * FROM queued_images WHERE user_did = ? AND storage_key = ?',
-    [userDid, storageKey]
-  );
+  return await useDatabase(async db => {
+    const image = await db.get(
+      'SELECT * FROM queued_images WHERE user_did = ? AND storage_key = ?',
+      [userDid, storageKey]
+    );
 
-  if (!image) {
-    throw new Error('Image not found in queue');
-  }
-  
-  return image;
+    if (!image) {
+      throw new Error('Image not found in queue');
+    }
+    
+    return image;
+  });
 }
 
 export async function updateImageQueueEntry(
@@ -58,9 +55,7 @@ export async function updateImageQueueEntry(
   storageKey: string,
   updates: Partial<Pick<QueuedImage, 'post_text' | 'is_nsfw'>>
 ): Promise<void> {
-  return getMutex(MUTEX_PURPOSE, userDid).runExclusive(async () => {
-    const db = await ensureDatabase();
-    
+  return await getMutex(MUTEX_PURPOSE, userDid).runExclusive(async () => await useDatabase(async db => {
     const setParts = [];
     const values = [];
     
@@ -83,15 +78,14 @@ export async function updateImageQueueEntry(
       SET ${setParts.join(', ')} 
       WHERE user_did = ? AND storage_key = ?
     `, values);
-  });
+  }));
 }
 
 export async function getImageQueueForUser(userDid: string): Promise<QueuedImage[]> {
-  const db = await ensureDatabase();
-  return await db.all(
+  return await useDatabase(async db => await db.all(
     'SELECT * FROM queued_images WHERE user_did = ? ORDER BY queue_order ASC',
     [userDid]
-  );
+  ));
 }
 
 export async function reorderImageInQueue(
@@ -99,9 +93,7 @@ export async function reorderImageInQueue(
   sourceImageStorageKey: string,
   destinationOrder: number,
 ): Promise<void> {
-  return getMutex(MUTEX_PURPOSE, userDid).runExclusive(async () => {
-    const db = await ensureDatabase();
-    
+  return await getMutex(MUTEX_PURPOSE, userDid).runExclusive(async () => await useDatabase(async db => {
     await db.run('BEGIN TRANSACTION');
     
     try {
@@ -159,13 +151,11 @@ export async function reorderImageInQueue(
       await db.run('ROLLBACK');
       throw error;
     }
-  });
+  }));
 }
 
 export async function deleteFromImageQueue(userDid: string, storageKey: string): Promise<void> {
-  return getMutex(MUTEX_PURPOSE, userDid).runExclusive(async () => {
-    const db = await ensureDatabase();
-    
+  return await getMutex(MUTEX_PURPOSE, userDid).runExclusive(async () => await useDatabase(async db => {
     await db.run('BEGIN TRANSACTION');
     
     try {
@@ -195,17 +185,17 @@ export async function deleteFromImageQueue(userDid: string, storageKey: string):
       await db.run('ROLLBACK');
       throw error;
     }
-  });
+  }));
 }
 
 export async function getNextImageToPostForUser(userDid: string): Promise<QueuedImage | undefined> {
-  const db = await ensureDatabase();
-  
-  return await db.get(`
-    SELECT qi.*
-    FROM queued_images qi
-    WHERE qi.user_did = ?
-    ORDER BY qi.queue_order ASC
-    LIMIT 1
-  `, [userDid]);
+  return await useDatabase(async db => await db.get(
+    `
+      SELECT qi.*
+      FROM queued_images qi
+      WHERE qi.user_did = ?
+      ORDER BY qi.queue_order ASC
+      LIMIT 1
+    `, [userDid])
+  );
 }

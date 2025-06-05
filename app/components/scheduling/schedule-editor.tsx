@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Clock, Plus, X, Globe, PauseCircle, PlayCircle } from 'lucide-react';
-import type { PostingSchedule, ProposedPostingSchedule } from '~/model/model';
+import type { ProposedPostingSchedule } from '~/model/model';
 import { cronToDays, cronToDescription, getNextExecutionsForMultipleSchedules, timeToCron } from '~/lib/cron-utils';
 import { commonTimezones, DAY_NAMES } from '~/lib/time-utils';
 import { DaysOfWeekInput } from './days-of-week-input';
 import { TimeInput } from './time-input';
+import { COLORS, type ColorType } from '~/lib/color-utils';
+import { ColorPicker } from '../color-picker';
 
 
 interface ScheduleEditorProps {
@@ -13,6 +15,7 @@ interface ScheduleEditorProps {
   onAddSchedule: (scheduleToAdd: ProposedPostingSchedule) => void;
   onToggleSchedule: (index: number, active: boolean) => void;
   onDeleteSchedule: (index: number) => void;
+  onColorChange: (index: number, color: ColorType) => void;
   onTimezoneChange: (timezone: string) => void;
 }
 
@@ -22,35 +25,40 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
   onAddSchedule,
   onToggleSchedule,
   onDeleteSchedule,
+  onColorChange,
   onTimezoneChange,
 }) => {
   const [selectedTime, setSelectedTime] = useState<{ hour: number; minute: number }>({ hour: 9, minute: 0 });
   const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [nextColor, setNextColor] = useState<number>(0);
   const [showTimezoneSelector, setShowTimezoneSelector] = useState(false);
 
-  function getCardColor(color: PostingSchedule['color'], active: boolean): string {
+  function getCardColor(color: ColorType, active: boolean): string {
     return active ? `bg-${color}-50 border-${color}-200` : `bg-gray-50 border-gray-200`;
   }
 
-  function getLargeTextColor(color: PostingSchedule['color'], active: boolean): string {
+  function getLargeTextColor(color: ColorType, active: boolean): string {
     return active ? `text-${color}-900` : 'text-gray-400';
   }
 
-  function getSmallTextColor(color: PostingSchedule['color'], active: boolean): string {
+  function getSmallTextColor(color: ColorType, active: boolean): string {
     return active ? `text-${color}-600` : 'text-gray-400';
   }
 
-  function getPauseButtonColor(color: PostingSchedule['color'], active: boolean): string {
+  function getPauseButtonColor(color: ColorType, active: boolean): string {
     return active ? `text-${color}-600 hover:text-gray-600` : `text-gray-400 hover:text-${color}-900`;
   }
 
-  function getCloseButtonColor(color: PostingSchedule['color'], active: boolean): string {
+  function getCloseButtonColor(color: ColorType, active: boolean): string {
     return active ? `text-${color}-600 hover:text-red-600` : `text-gray-400 hover:text-red-600`;
   }
 
-  const getRandomColor = (): PostingSchedule['color'] => {
-    const colors: PostingSchedule['color'][] = ['blue', 'green', 'purple', 'orange', 'red', 'indigo'];
-    return colors[Math.floor(Math.random() * colors.length)];
+  const getNextColor = (): ColorType => {
+    const color = COLORS[nextColor];
+    const newNextColor = nextColor + 1 >= COLORS.length ? 0 : nextColor + 1;
+    setNextColor(newNextColor);
+
+    return color;
   };
 
   const handleAddSchedule = () => {
@@ -60,7 +68,7 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
 
     onAddSchedule({
       cron_expression: cronExpression,
-      color: getRandomColor(),
+      color: getNextColor(),
       active: true
     });
   };
@@ -164,6 +172,12 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
+                  <ColorPicker
+                    currentColor={schedule.color}
+                    active={schedule.active}
+                    onColorChange={(color) => onColorChange(index, color)}
+                  />
+                  
                   <button 
                     onClick={() => onToggleSchedule(index, !schedule.active)}
                     className={`p-1 ${getPauseButtonColor(schedule.color, schedule.active)}`}

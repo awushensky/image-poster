@@ -6,6 +6,9 @@ RUN npm ci
 FROM node:20-alpine AS development
 COPY . /app
 COPY --from=development-dependencies-env /app/node_modules /app/node_modules
+ENV CHOKIDAR_USEPOLLING=true
+ENV VITE_DEV_SERVER_POLL=true
+ENV VITE_HMR_PORT=24678
 WORKDIR /app
 EXPOSE 3000
 CMD ["npm", "run", "dev"]

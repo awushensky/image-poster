@@ -35,6 +35,14 @@ export default function ScheduleModalContent({
     onCancel();
   };
 
+  const handleUpdateSchedule = (index: number, update: Partial<ProposedPostingSchedule>) => {
+    setSchedules((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], ...update };
+      return updated;
+    });
+  }
+
   const hasChanges = JSON.stringify(schedules) !== JSON.stringify(initialSchedules) || timezone !== initialTimezone;
 
   return (
@@ -47,18 +55,15 @@ export default function ScheduleModalContent({
             setSchedules((prev) => [...prev, scheduleToAdd]);
           }}
           onToggleSchedule={(index, active) => {
-            setSchedules((prev) => {
-              const updated = [...prev];
-              updated[index] = { ...updated[index], active };
-              return updated;
-            });
+            handleUpdateSchedule(index, { active });
           }}
           onDeleteSchedule={(index) => {
             setSchedules((prev) => prev.filter((_, i) => i !== index));
           }}
-          onTimezoneChange={(newTimezone) => {
-            setTimezone(newTimezone);
+          onColorChange={(index, color) => {
+            handleUpdateSchedule(index, { color });
           }}
+          onTimezoneChange={setTimezone}
         />
       </div>
 

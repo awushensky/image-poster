@@ -1,3 +1,5 @@
+import type { ColorType } from "~/lib/color-utils";
+
 export interface User {
   did: string;
   handle: string;
@@ -12,7 +14,7 @@ export interface PostingSchedule {
   id: number;
   user_did: string;
   cron_expression: string;
-  color: 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'indigo';
+  color: ColorType;
   active: boolean;
   last_executed?: Date;
   created_at: Date;

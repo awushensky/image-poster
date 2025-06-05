@@ -1,8 +1,8 @@
-import { ensureDatabase } from './database.server';
 import { createHmac } from 'crypto';
 import type { User } from "~/model/model";
 import { getMutex } from '~/lib/mutex';
 import { getOAuthSession } from './oauth-session-database.server';
+import { useDatabase } from './database.server';
 
 
 const MUTEX_PURPOSE = 'user-session';
@@ -26,20 +26,18 @@ export async function createUserSession(userDid: string): Promise<string> {
   }
   
   const sessionToken = generateSessionToken(userDid);
-  const db = await ensureDatabase();
-  
-  await db.run(`
-    INSERT OR REPLACE INTO user_sessions (session_token, user_did, last_used_at)
-    VALUES (?, ?, CURRENT_TIMESTAMP)
-  `, [sessionToken, userDid]);
+  await useDatabase(async db => await db.run(
+    `
+      INSERT OR REPLACE INTO user_sessions (session_token, user_did, last_used_at)
+      VALUES (?, ?, CURRENT_TIMESTAMP)
+    `, [sessionToken, userDid])
+  );
   
   return sessionToken;
 }
 
 export async function getUserFromSession(sessionToken: string): Promise<User | undefined> {
-  return getMutex(MUTEX_PURPOSE, sessionToken).runExclusive(async () => {
-    const db = await ensureDatabase();
-
+  return await getMutex(MUTEX_PURPOSE, sessionToken).runExclusive(async () => await useDatabase(async db => {
     await db.run('BEGIN TRANSACTION');
 
     try {
@@ -64,15 +62,13 @@ export async function getUserFromSession(sessionToken: string): Promise<User | u
       await db.run('ROLLBACK');
       throw error;
     }
-  });
+  }));
 }
 
 export async function deleteSessionByToken(sessionToken: string): Promise<void> {
-  const db = await ensureDatabase();
-  await db.run('DELETE FROM user_sessions WHERE session_token = ?', [sessionToken]);
+  await useDatabase(async db => await db.run('DELETE FROM user_sessions WHERE session_token = ?', [sessionToken]));
 }
 
 export async function deleteUserSessionsByDid(userDid: string): Promise<void> {
-  const db = await ensureDatabase();
-  await db.run('DELETE FROM user_sessions WHERE user_did = ?', [userDid]);
+  await useDatabase(async db => await db.run('DELETE FROM user_sessions WHERE user_did = ?', [userDid]));
 }

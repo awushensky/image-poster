@@ -1,4 +1,3 @@
-import { ensureDatabase } from '../db/database.server';
 import { fileStorage } from '../lib/image-storage.server';
 import { postImageToBluesky } from '../auth/bluesky-auth.server';
 import { type PostingSchedule, type QueuedImage } from '../model/model';
@@ -6,6 +5,10 @@ import { getAllActivePostingSchedules, updateScheduleLastExecuted } from '~/db/p
 import { createPostedImageEntry } from '~/db/posted-image-database.server';
 import { deleteFromImageQueue, getNextImageToPostForUser } from '~/db/image-queue-database.server';
 import { getNextExecution } from '~/lib/cron-utils';
+import { getMutex } from '~/lib/mutex';
+
+
+const MUTEX_PURPOSE = 'posting-scheduler';
 
 class ImageScheduler {
   private isRunning = false;
@@ -117,19 +120,10 @@ class ImageScheduler {
         nextImage.is_nsfw
       );
 
-      const db = await ensureDatabase();
-      await db.run('BEGIN TRANSACTION');
-      
-      try {
-        await this.moveImageToPosted(nextImage);
-        await updateScheduleLastExecuted(schedule.id);
-        await db.run('COMMIT');
-        
-        console.log(`Successfully posted image for user ${userDid}: ${nextImage.storage_key}`);
-      } catch (error) {
-        await db.run('ROLLBACK');
-        throw error;
-      }
+      getMutex(MUTEX_PURPOSE, schedule.user_did).runExclusive(async () => {
+          await this.moveImageToPosted(nextImage);
+          await updateScheduleLastExecuted(schedule.id);
+      });
     } catch (error) {
       console.error(`Error processing schedule trigger for user ${userDid}:`, error);
       throw error;

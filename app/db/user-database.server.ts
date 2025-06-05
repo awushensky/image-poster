@@ -1,13 +1,12 @@
 import type { User } from "~/model/model";
-import { ensureDatabase } from './database.server';
+import { useDatabase } from './database.server';
 import { getMutex } from "~/lib/mutex";
 
 
 const MUTEX_PURPOSE = 'user-database';
 
 export async function getUserByDid(did: string): Promise<User | undefined> {
-  const db = await ensureDatabase();
-  return await db.get('SELECT * FROM users WHERE did = ?', [did]);
+  return await useDatabase(async db => await db.get('SELECT * FROM users WHERE did = ?', [did]));
 }
 
 export async function createOrUpdateUser(
@@ -17,8 +16,7 @@ export async function createOrUpdateUser(
   displayName?: string,
   avatarUrl?: string,
 ): Promise<User> {
-  return getMutex(MUTEX_PURPOSE, did).runExclusive(async () => {
-    const db = await ensureDatabase();
+  return await getMutex(MUTEX_PURPOSE, did).runExclusive(async () => await useDatabase(async db => {
     const existing = await getUserByDid(did);
 
     if (existing) {
@@ -39,5 +37,5 @@ export async function createOrUpdateUser(
       `, [did, handle, timezone, displayName, avatarUrl]);
       return (await getUserByDid(did))!;
     }
-  });
+  }));
 }
