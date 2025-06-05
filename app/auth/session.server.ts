@@ -1,7 +1,7 @@
 import { createCookieSessionStorage } from 'react-router';
 import {
   createUserSession as createDbSession,
-  deleteSessionByToken,
+  deleteUserSession,
   getUserFromSession,
 } from '~/db/user-session-database.server';
 import { isSessionValid, revokeUserSession } from './bluesky-auth.server';
@@ -52,7 +52,7 @@ export async function getUser(request: Request): Promise<User | null> {
   // Ensure the user still has a valid session with Bluesky, otherwise log them out.
   const hasValidBskySession = await isSessionValid(user.did);
   if (!hasValidBskySession) {
-    await deleteSessionByToken(sessionToken);
+    await deleteUserSession(sessionToken);
     return null;
   }
 
@@ -79,7 +79,7 @@ export async function logout(request: Request) {
     if (user) {
       await revokeUserSession(user.did);
     }
-    await deleteSessionByToken(sessionToken);
+    await deleteUserSession(sessionToken);
   }
   
   const session = await sessionStorage.getSession(request.headers.get('Cookie'));

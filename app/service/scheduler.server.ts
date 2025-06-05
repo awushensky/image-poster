@@ -1,14 +1,12 @@
 import { fileStorage } from '../lib/image-storage.server';
 import { postImageToBluesky } from '../auth/bluesky-auth.server';
-import { type PostingSchedule, type QueuedImage } from '../model/model';
-import { getAllActivePostingSchedules, updateScheduleLastExecuted } from '~/db/posting-schedule-database.server';
-import { createPostedImageEntry } from '~/db/posted-image-database.server';
-import { deleteFromImageQueue, getNextImageToPostForUser } from '~/db/image-queue-database.server';
+import { type PostingSchedule } from '../model/model';
+import {
+  getNextImageOrUpdateSchedule,
+  processImagePosting,
+} from '~/db/scheduler-database.server';
 import { getNextExecution } from '~/lib/cron-utils';
-import { getMutex } from '~/lib/mutex';
-
-
-const MUTEX_PURPOSE = 'posting-scheduler';
+import { getAllActivePostingSchedulesWithTimezone } from '~/db/posting-schedule-database.server';
 
 class ImageScheduler {
   private isRunning = false;
@@ -50,26 +48,37 @@ class ImageScheduler {
 
   private async checkSchedules() {
     const checkStartTime = new Date();
+    console.log('🔍 Scheduler: Checking schedules...');
     
     try {
-      const schedules = await getAllActivePostingSchedules();
-      const triggeredSchedules = schedules.filter(schedule => this.shouldTriggerSchedule(schedule, this.lastGlobalCheck, checkStartTime));
+      // Single database call to get all active schedules
+      const schedules = await getAllActivePostingSchedulesWithTimezone();
+      console.log(`📅 Found ${schedules.length} active schedules`);
+      
+      // Filter triggered schedules
+      const triggeredSchedules = schedules.filter(schedule => 
+        this.shouldTriggerSchedule(schedule, this.lastGlobalCheck, checkStartTime)
+      );
       
       if (triggeredSchedules.length > 0) {
-        const results = await Promise.allSettled(
-          triggeredSchedules.map(schedule => this.processScheduleTrigger(schedule))
-        );
+        console.log(`🚀 Processing ${triggeredSchedules.length} triggered schedules`);
         
-        results.forEach((result, index) => {
-          if (result.status === 'rejected') {
-            console.error(`Failed to process schedule ${triggeredSchedules[index].id}:`, result.reason);
+        // Process schedules sequentially to avoid overwhelming the database
+        for (const schedule of triggeredSchedules) {
+          try {
+            await this.processScheduleTrigger(schedule);
+            console.log(`✅ Successfully processed schedule ${schedule.id}`);
+          } catch (error) {
+            console.error(`❌ Failed to process schedule ${schedule.id}:`, error);
           }
-        });
+        }
+      } else {
+        console.log('😴 No schedules triggered this check');
       }
       
       this.lastGlobalCheck = checkStartTime;
     } catch (error) {
-      console.error('Error checking schedules:', error);
+      console.error('❌ Error checking schedules:', error);
     }
   }
 
@@ -101,18 +110,24 @@ class ImageScheduler {
 
   private async processScheduleTrigger(schedule: PostingSchedule & { timezone: string }) {
     const userDid = schedule.user_did;
+    console.log(`📋 Processing schedule ${schedule.id} for user ${userDid}`);
     
     try {
-      const nextImage = await getNextImageToPostForUser(userDid);
+      // Single database call that gets next image OR updates schedule if no images
+      const nextImage = await getNextImageOrUpdateSchedule(userDid, schedule.id);
+      
       if (!nextImage) {
-        console.log(`No images in queue for user ${userDid}`);
-        // Still update last_executed to prevent constant checking
-        await updateScheduleLastExecuted(schedule.id);
+        console.log(`📭 No images in queue for user ${userDid} - schedule updated`);
         return;
       }
 
+      console.log(`📸 Found image to post: ${nextImage.storage_key}`);
+      
+      // Read image from storage
       const imageBuffer = await this.readImageFromStorage(nextImage.storage_key);
       
+      // Post to Bluesky
+      console.log(`🐦 Posting to Bluesky for user ${userDid}`);
       await postImageToBluesky(
         userDid,
         imageBuffer,
@@ -120,18 +135,29 @@ class ImageScheduler {
         nextImage.is_nsfw
       );
 
-      getMutex(MUTEX_PURPOSE, schedule.user_did).runExclusive(async () => {
-          await this.moveImageToPosted(nextImage);
-          await updateScheduleLastExecuted(schedule.id);
-      });
+      // Single database transaction: move to posted, reorder queue, update schedule
+      console.log(`📝 Processing post-posting database operations`);
+      await processImagePosting(userDid, nextImage.storage_key, schedule.id);
+      
+      console.log(`✅ Successfully processed schedule ${schedule.id}`);
     } catch (error) {
-      console.error(`Error processing schedule trigger for user ${userDid}:`, error);
+      console.error(`❌ Error processing schedule trigger for user ${userDid}:`, error);
+      
+      // Even if posting fails, update last_executed to prevent retry loops
+      try {
+        await updateScheduleLastExecutedOnly(schedule.id);
+        console.log(`📅 Updated schedule ${schedule.id} last_executed after error`);
+      } catch (updateError) {
+        console.error(`❌ Failed to update last_executed after error:`, updateError);
+      }
+      
       throw error;
     }
   }
 
   private async readImageFromStorage(storageKey: string): Promise<Buffer> {
     try {
+      console.log(`📁 Reading image from storage: ${storageKey}`);
       const imageFile = await fileStorage.get(storageKey);
       if (!imageFile) {
         throw new Error(`Image not found in storage: ${storageKey}`);
@@ -140,19 +166,29 @@ class ImageScheduler {
       const arrayBuffer = await imageFile.arrayBuffer();
       const imageBuffer = Buffer.from(arrayBuffer);
 
+      console.log(`✅ Successfully read image: ${imageBuffer.length} bytes`);
       return imageBuffer;
     } catch (error) {
-      console.error(`Error reading image ${storageKey}:`, error);
+      console.error(`❌ Error reading image ${storageKey}:`, error);
       throw error;
     }
   }
 
-  private async moveImageToPosted(image: QueuedImage) {
-    await createPostedImageEntry(image.user_did, image.storage_key);
-    await deleteFromImageQueue(image.user_did, image.storage_key);
+  // Add graceful shutdown method
+  public async shutdown() {
+    console.log('🛑 Shutting down scheduler...');
+    this.stop();
+    
+    // Wait a bit for any ongoing operations to complete
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log('✅ Scheduler shutdown complete');
   }
 }
 
 const scheduler = new ImageScheduler();
 
 export { scheduler };
+  function updateScheduleLastExecutedOnly(id: number) {
+    throw new Error('Function not implemented.');
+  }
+

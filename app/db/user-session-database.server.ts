@@ -1,11 +1,6 @@
 import { createHmac } from 'crypto';
 import type { User } from "~/model/model";
-import { getMutex } from '~/lib/mutex';
-import { getOAuthSession } from './oauth-session-database.server';
 import { useDatabase } from './database.server';
-
-
-const MUTEX_PURPOSE = 'user-session';
 
 function generateSessionToken(userDid: string): string {
   const secret = process.env.SESSION_SECRET;
@@ -19,56 +14,61 @@ function generateSessionToken(userDid: string): string {
 }
 
 export async function createUserSession(userDid: string): Promise<string> {
-  // Verify OAuth session exists before creating user session
-  const existingOAuthSession = await getOAuthSession(userDid);
-  if (!existingOAuthSession) {
-    throw new Error(`No OAuth session found for user: ${userDid}`);
-  }
-  
-  const sessionToken = generateSessionToken(userDid);
-  await useDatabase(async db => await db.run(
-    `
+  return await useDatabase(async db => {
+    const existingOAuthSession = await db.get(
+      'SELECT 1 FROM oauth_sessions WHERE user_did = ?',
+      [userDid]
+    );
+    
+    if (!existingOAuthSession) {
+      throw new Error(`No OAuth session found for user: ${userDid}`);
+    }
+    
+    const sessionToken = generateSessionToken(userDid);
+    await db.run(`
       INSERT OR REPLACE INTO user_sessions (session_token, user_did, last_used_at)
       VALUES (?, ?, CURRENT_TIMESTAMP)
-    `, [sessionToken, userDid])
-  );
-  
-  return sessionToken;
+    `, [sessionToken, userDid]);
+    
+    return sessionToken;
+  });
 }
 
 export async function getUserFromSession(sessionToken: string): Promise<User | undefined> {
-  return await getMutex(MUTEX_PURPOSE, sessionToken).runExclusive(async () => await useDatabase(async db => {
-    await db.run('BEGIN TRANSACTION');
+  return await useDatabase(async db => {
+    const user = await db.get(`
+      SELECT u.did, u.handle, u.display_name, u.avatar_url, u.timezone, u.created_at, u.last_login
+      FROM user_sessions us
+      JOIN users u ON us.user_did = u.did
+      WHERE us.session_token = ?
+    `, [sessionToken]) as User | undefined;
 
-    try {
-      const user = await db.get(`
-        SELECT u.*
-        FROM user_sessions us
-        JOIN users u ON us.user_did = u.did
-        WHERE us.session_token = ?
-      `, [sessionToken]) as User | undefined;
-
-      if (user) {
-        await db.run(`
-          UPDATE user_sessions 
-          SET last_used_at = CURRENT_TIMESTAMP 
-          WHERE session_token = ?
-        `, [sessionToken]);
-      }
-      
-      await db.run('COMMIT');
-      return user;
-    } catch (error) {
-      await db.run('ROLLBACK');
-      throw error;
+    if (user) {
+      await db.run(`
+        UPDATE user_sessions 
+        SET last_used_at = CURRENT_TIMESTAMP 
+        WHERE session_token = ?
+      `, [sessionToken]);
     }
-  }));
+
+    return user;
+  });
 }
 
-export async function deleteSessionByToken(sessionToken: string): Promise<void> {
-  await useDatabase(async db => await db.run('DELETE FROM user_sessions WHERE session_token = ?', [sessionToken]));
+export async function deleteUserSession(sessionToken: string): Promise<void> {
+  await useDatabase(async db => {
+    await db.run('DELETE FROM user_sessions WHERE session_token = ?', [sessionToken]);
+  });
 }
 
-export async function deleteUserSessionsByDid(userDid: string): Promise<void> {
-  await useDatabase(async db => await db.run('DELETE FROM user_sessions WHERE user_did = ?', [userDid]));
+// Cleanup old sessions (useful for maintenance)
+export async function cleanupExpiredSessions(olderThanDays: number = 30): Promise<number> {
+  return await useDatabase(async db => {
+    const result = await db.run(`
+      DELETE FROM user_sessions 
+      WHERE last_used_at < datetime('now', '-${olderThanDays} days')
+    `);
+    
+    return result.changes || 0;
+  });
 }

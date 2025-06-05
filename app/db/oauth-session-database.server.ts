@@ -1,14 +1,13 @@
 import type { NodeSavedSession } from "@atproto/oauth-client-node";
 import { useDatabase } from "./database.server";
 
-
 export async function storeOAuthSession(userDid: string, session: NodeSavedSession): Promise<void> {
-  await useDatabase(async db => await db.run(
-    `
+  await useDatabase(async db => {
+    await db.run(`
       INSERT OR REPLACE INTO oauth_sessions (user_did, session_data, updated_at)
       VALUES (?, ?, CURRENT_TIMESTAMP)
-    `, [userDid, JSON.stringify(session)])
-  );
+    `, [userDid, JSON.stringify(session)]);
+  });
 }
 
 export async function getOAuthSession(userDid: string): Promise<NodeSavedSession | undefined> {
@@ -24,20 +23,30 @@ export async function getOAuthSession(userDid: string): Promise<NodeSavedSession
 }
 
 export async function deleteOAuthSession(userDid: string): Promise<void> {
-  await useDatabase(async db => await db.run('DELETE FROM oauth_sessions WHERE user_did = ?', [userDid]));
+  await useDatabase(async db => {
+    await db.run('DELETE FROM oauth_sessions WHERE user_did = ?', [userDid]);
+  });
 }
 
 export async function updateOAuthSession(userDid: string, session: NodeSavedSession): Promise<void> {
   await useDatabase(async db => {
+    await db.run(`
+      INSERT INTO oauth_sessions (user_did, session_data, updated_at)
+      VALUES (?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(user_did) DO UPDATE SET
+        session_data = excluded.session_data,
+        updated_at = excluded.updated_at
+    `, [userDid, JSON.stringify(session)]);
+  });
+}
+
+export async function deleteExpiredOAuthSessions(olderThanDays: number = 30): Promise<number> {
+  return await useDatabase(async db => {
     const result = await db.run(`
-      UPDATE oauth_sessions 
-      SET session_data = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE user_did = ?
-    `, [JSON.stringify(session), userDid]);
+      DELETE FROM oauth_sessions 
+      WHERE updated_at < datetime('now', '-${olderThanDays} days')
+    `);
     
-    if (result.changes === 0) {
-      // If no rows were updated, the session doesn't exist, so insert it
-      await storeOAuthSession(userDid, session);
-    }
+    return result.changes || 0;
   });
 }

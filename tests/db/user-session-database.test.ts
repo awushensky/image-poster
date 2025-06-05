@@ -8,7 +8,7 @@ import type { NodeSavedSession } from '@atproto/oauth-client-node';
 import {
   createUserSession,
   getUserFromSession,
-  deleteSessionByToken,
+  deleteUserSession,
   storeOAuthSession,
   getOAuthSession,
   deleteOAuthSession
@@ -353,7 +353,7 @@ describe('User Session Database Operations', () => {
         const beforeDelete = await getUserFromSession(sessionToken);
         expect(beforeDelete).toBeDefined();
 
-        await deleteSessionByToken(sessionToken);
+        await deleteUserSession(sessionToken);
 
         // Verify session is gone
         const afterDelete = await getUserFromSession(sessionToken);
@@ -362,7 +362,7 @@ describe('User Session Database Operations', () => {
 
       it('should handle deleting non-existent token gracefully', async () => {
         // Should not throw error
-        await expect(deleteSessionByToken('non-existent-token')).resolves.not.toThrow();
+        await expect(deleteUserSession('non-existent-token')).resolves.not.toThrow();
       });
 
       it('should only delete specified token', async () => {
@@ -375,7 +375,7 @@ describe('User Session Database Operations', () => {
         const token1 = await createUserSession(testUserDid);
         const token2 = await createUserSession(testUserDid2);
 
-        await deleteSessionByToken(token1);
+        await deleteUserSession(token1);
 
         // Token1 should be gone
         const user1 = await getUserFromSession(token1);
@@ -544,7 +544,7 @@ describe('User Session Database Operations', () => {
       await storeOAuthSession(testUserDid, mockSession);
       const token1 = await createUserSession(testUserDid);
 
-      await deleteSessionByToken(token1);
+      await deleteUserSession(token1);
       await storeOAuthSession(testUserDid, mockSession);
       const token2 = await createUserSession(testUserDid);
 
@@ -895,7 +895,7 @@ describe('User Session Database Operations', () => {
         const beforeDelete = await getUserFromSession(sessionToken);
         expect(beforeDelete).toBeDefined();
 
-        await deleteSessionByToken(sessionToken);
+        await deleteUserSession(sessionToken);
 
         // Verify session is gone
         const afterDelete = await getUserFromSession(sessionToken);
@@ -904,7 +904,7 @@ describe('User Session Database Operations', () => {
 
       it('should handle deleting non-existent token gracefully', async () => {
         // Should not throw error
-        await expect(deleteSessionByToken('non-existent-token')).resolves.not.toThrow();
+        await expect(deleteUserSession('non-existent-token')).resolves.not.toThrow();
       });
 
       it('should only delete specified token', async () => {
@@ -924,7 +924,7 @@ describe('User Session Database Operations', () => {
         const token1 = await createUserSession(testUserDid);
         const token2 = await createUserSession(testUserDid2);
 
-        await deleteSessionByToken(token1);
+        await deleteUserSession(token1);
 
         // Token1 should be gone
         const user1 = await getUserFromSession(token1);
@@ -1020,7 +1020,7 @@ describe('User Session Database Operations', () => {
         await storeOAuthSession(testUserDid, mockSession);
         const token1 = await createUserSession(testUserDid);
 
-        await deleteSessionByToken(token1);
+        await deleteUserSession(token1);
         await storeOAuthSession(testUserDid, mockSession);
         const token2 = await createUserSession(testUserDid);
 

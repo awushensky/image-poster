@@ -13,7 +13,6 @@ import { getUserPostingSchedules } from "~/db/posting-schedule-database.server";
 import ScheduleModalContent from "~/components/scheduling/schedule-modal-content";
 import UploadModal from "~/components/image-upload/upload-modal";
 
-
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
   const schedules = await getUserPostingSchedules(user.did);
@@ -23,7 +22,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export default function Dashboard({ loaderData }: Route.ComponentProps) {
-  const fetcher = useFetcher();
   const revalidator = useRevalidator();
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -42,25 +40,55 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
     const tasks = [];
 
     if (JSON.stringify(updatedSchedules) !== JSON.stringify(schedules)) {
-      tasks.push(fetcher.submit(
-        { schedules: JSON.stringify(updatedSchedules) },
-        { method: "POST", action: "/api/posting-schedules" }
-      ));
+      tasks.push(
+        fetch('/api/posting-schedules', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ schedules: updatedSchedules })
+        }).then(async (response) => {
+          const result = await response.json();
+          if (!result.success) {
+            throw new Error(result.error || 'Failed to update schedules');
+          }
+          return result;
+        })
+      );
     }
 
     if (timezone !== user.timezone) {
       tasks.push(
-      fetcher.submit(
-        { timezone },
-        { method: 'PUT', action: '/api/user' }
-      ));
+        fetch('/api/user', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ timezone })
+        }).then(async (response) => {
+          const result = await response.json();
+          if (!result.success) {
+            throw new Error(result.error || 'Failed to update timezone');
+          }
+          return result;
+        })
+      );
     }
 
-    await Promise.all(tasks);
-    setScheduleModalOpen(false);
+    try {
+      await Promise.all(tasks);
+      console.log('✅ Schedule and timezone updated successfully');
+      setScheduleModalOpen(false);
+      revalidator.revalidate();
+    } catch (error) {
+      console.error('Failed to save schedule changes:', error);
+      // Could show an error toast here instead of just logging
+      // For now, we'll still close the modal, but you might want to keep it open on error
+    }
   }
 
   const handleImagesUploaded = async () => {
+    console.log('🎉 Images uploaded successfully, closing modal and revalidating');
     setUploadModalOpen(false);
     revalidator.revalidate();
   }
@@ -69,34 +97,96 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
     setUploadModalOpen(false);
   };
 
+  // Replace fetcher.submit with regular fetch calls to prevent navigation
   const handleImagesReordered = async (storageKey: string, destinationOrder: number) => {
     setLoading(true);
-    await fetcher.submit(
-      {
-        action: 'reorder',
-        toOrder: destinationOrder,
-      },
-      { method: 'PUT', action: `/api/image/${storageKey}` }
-    );
-    setLoading(false);
+    try {
+      const formData = new FormData();
+      formData.append('action', 'reorder');
+      formData.append('toOrder', destinationOrder.toString());
+
+      const response = await fetch(`/api/image/${storageKey}`, {
+        method: 'PUT',
+        body: formData,
+      });
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        console.error('Failed to reorder image:', result.error);
+        // Could show an error toast here
+      } else {
+        console.log('✅ Image reordered successfully');
+        // Manually revalidate to refresh the UI
+        revalidator.revalidate();
+      }
+    } catch (error) {
+      console.error('Failed to reorder image:', error);
+      // Could show an error toast here
+    } finally {
+      setLoading(false);
+    }
   }
 
   const handleImageUpdated = async (storageKey: string, update: Partial<{ postText: string, isNsfw: boolean }>) => {
     setLoading(true);
-    await fetcher.submit(
-      {
-        action: 'update',
-        ...update
-      },
-      { method: 'PUT', action: `/api/image/${storageKey}` }
-    );
-    setLoading(false);
+    try {
+      const formData = new FormData();
+      formData.append('action', 'update');
+      
+      if (update.postText !== undefined) {
+        formData.append('postText', update.postText);
+      }
+      if (update.isNsfw !== undefined) {
+        formData.append('isNsfw', update.isNsfw.toString());
+      }
+
+      const response = await fetch(`/api/image/${storageKey}`, {
+        method: 'PUT',
+        body: formData,
+      });
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        console.error('Failed to update image:', result.error);
+        // Could show an error toast here
+      } else {
+        console.log('✅ Image updated successfully');
+        // Manually revalidate to refresh the UI
+        revalidator.revalidate();
+      }
+    } catch (error) {
+      console.error('Failed to update image:', error);
+      // Could show an error toast here
+    } finally {
+      setLoading(false);
+    }
   }
 
   const handleImageDelete = async (storageKey: string) => {
     setLoading(true);
-    await fetcher.submit({}, { method: 'DELETE', action: `/api/image/${storageKey}` });
-    setLoading(false);
+    try {
+      const response = await fetch(`/api/image/${storageKey}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        console.error('Failed to delete image:', result.error);
+        // Could show an error toast here
+      } else {
+        console.log('✅ Image deleted successfully');
+        // Manually revalidate to refresh the UI
+        revalidator.revalidate();
+      }
+    } catch (error) {
+      console.error('Failed to delete image:', error);
+      // Could show an error toast here
+    } finally {
+      setLoading(false);
+    }
   }
 
   const handleLogout = () => {

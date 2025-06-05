@@ -6,6 +6,20 @@ import type { QueuedImage, User } from "~/model/model";
 import { FileUpload, parseFormData, type FileUploadHandler } from "@mjackson/form-data-parser";
 import { createHash } from "crypto";
 
+interface ImageApiResult {
+  status: number;
+  success?: boolean;
+  error?: string;
+  message?: string;
+}
+
+interface UploadResult extends ImageApiResult {
+  storageKey?: string;
+}
+
+interface UpdateResult extends ImageApiResult {}
+
+interface DeleteResult extends ImageApiResult {}
 
 function fileNameToPostText(fileName: string): string {
   const fileNameSpaces = fileName.replaceAll('_', ' ');
@@ -47,36 +61,59 @@ async function loadImage(images: QueuedImage[], storageKey: string): Promise<Fil
  * @param user the user uploading the image
  * @param request the request containing the image file
  */
-async function uploadImage(user: User, request: Request): Promise<void> {
-  const uploadHandler: FileUploadHandler = async (fileUpload: FileUpload) => {
-    if (
-      fileUpload.fieldName === 'image' &&
-      /^image\//.test(fileUpload.type)
-    ) {
-      const storageKey = createHash('sha256')
-        .update(`${user.did}-${fileUpload.name}-${Date()}`)
-        .digest('hex');
+async function uploadImage(user: User, request: Request): Promise<UploadResult> {
+  try {
+    let uploadedStorageKey: string | null = null;
 
-      try {
-        // FileUpload objects are not meant to stick around for very long (they are
-        // streaming data from the request.body); store them as soon as possible.
-        await fileStorage.set(storageKey, fileUpload);
-        await createImageQueueEntry(user.did, storageKey, fileNameToPostText(fileUpload.name));
-      } catch (error) {
-        console.error('Upload error:', error);
-        throw error;
+    const uploadHandler: FileUploadHandler = async (fileUpload: FileUpload) => {
+      if (
+        fileUpload.fieldName === 'image' &&
+        /^image\//.test(fileUpload.type)
+      ) {
+        const storageKey = createHash('sha256')
+          .update(`${user.did}-${fileUpload.name}-${Date()}`)
+          .digest('hex');
+
+        try {
+          // FileUpload objects are not meant to stick around for very long (they are
+          // streaming data from the request.body); store them as soon as possible.
+          await fileStorage.set(storageKey, fileUpload);
+          await createImageQueueEntry(user.did, storageKey, fileNameToPostText(fileUpload.name));
+          uploadedStorageKey = storageKey;
+        } catch (error) {
+          console.error('Upload error:', error);
+          throw error;
+        }
+      } else {
+        throw new Error("Attempted to upload file with unsupported field name or type");
       }
-    } else {
-      throw new Response("Attempted to upload file with unsupported field name or type", {
-        status: 400,
-      });
-    }
-  }
+    };
 
-  await parseFormData(
-    request,
-    uploadHandler,
-  );
+    await parseFormData(request, uploadHandler);
+
+    if (!uploadedStorageKey) {
+      return {
+        status: 400,
+        success: false,
+        error: "No valid image file was uploaded"
+      };
+    }
+
+    return {
+      status: 200,
+      success: true,
+      storageKey: uploadedStorageKey,
+      message: "Image uploaded successfully"
+    };
+
+  } catch (error) {
+    console.error('Upload error:', error);
+    return {
+      status: 500,
+      success: false,
+      error: error instanceof Error ? error.message : "Upload failed"
+    };
+  }
 }
 
 /**
@@ -84,36 +121,66 @@ async function uploadImage(user: User, request: Request): Promise<void> {
  * @param user the user performing the update
  * @param storageKey the storage key of the image to update
  * @param update the form data containing the update information
- * @returns 
  */
-async function updateImage(user: User, storageKey: string, update: FormData): Promise<void> {
-  const action = update.get("action")?.toString();
+async function updateImage(user: User, storageKey: string, update: FormData): Promise<UpdateResult> {
+  try {
+    const action = update.get("action")?.toString();
 
-  switch(action) {
-    case 'reorder':
-      const toOrderString = update.get("toOrder")?.toString();
-      if (!toOrderString) {
-        throw new Response("toOrder not provided", { status: 400 });
-      }
-      
-      let toOrder: number;
-      try {
-        toOrder = parseInt(toOrderString);
-      } catch (exception) {
-        throw new Response("Invalid toOrder provided", { status: 400 });
-      }
+    switch(action) {
+      case 'reorder':
+        const toOrderString = update.get("toOrder")?.toString();
+        if (!toOrderString) {
+          return {
+            status: 400,
+            success: false,
+            error: "toOrder not provided"
+          };
+        }
+        
+        let toOrder: number;
+        try {
+          toOrder = parseInt(toOrderString);
+        } catch (exception) {
+          return {
+            status: 400,
+            success: false,
+            error: "Invalid toOrder provided"
+          };
+        }
 
-      await reorderImageInQueue(user.did, storageKey, toOrder);
-      return;
-    case 'update':
-      const postText = update.get("postText")?.toString();
-      const isNsfwStr = update.get("isNsfw")?.toString()?.toLowerCase();
-      const isNsfw = isNsfwStr === undefined ? undefined : isNsfwStr === "true"
+        await reorderImageInQueue(user.did, storageKey, toOrder);
+        return {
+          status: 200,
+          success: true,
+          message: "Image reordered successfully"
+        };
 
-      await updateImageQueueEntry(user.did, storageKey, { post_text: postText, is_nsfw: isNsfw });
-      return;
-    default:
-      throw new Response(`Invalid image update action ${action}`, { status: 400 });
+      case 'update':
+        const postText = update.get("postText")?.toString();
+        const isNsfwStr = update.get("isNsfw")?.toString()?.toLowerCase();
+        const isNsfw = isNsfwStr === undefined ? undefined : isNsfwStr === "true";
+
+        await updateImageQueueEntry(user.did, storageKey, { post_text: postText, is_nsfw: isNsfw });
+        return {
+          status: 200,
+          success: true,
+          message: "Image updated successfully"
+        };
+
+      default:
+        return {
+          status: 400,
+          success: false,
+          error: `Invalid image update action ${action}`
+        };
+    }
+  } catch (error) {
+    console.error('Update error:', error);
+    return {
+      status: 500,
+      success: false,
+      error: error instanceof Error ? error.message : "Update failed"
+    };
   }
 }
 
@@ -122,17 +189,37 @@ async function updateImage(user: User, storageKey: string, update: FormData): Pr
  * @param user the user performing the delete
  * @param storageKey the storage key of the image to delete
  */
-async function deleteImage(user: User, storageKey: string): Promise<void> {
-  const image = readImageQueueEntry(user.did, storageKey);
-  if (!image) {
-    throw new Response("Image not found", { status: 404 });
-  }
+async function deleteImage(user: User, storageKey: string): Promise<DeleteResult> {
+  try {
+    const image = await readImageQueueEntry(user.did, storageKey);
+    if (!image) {
+      return {
+        status: 404,
+        success: false,
+        error: "Image not found"
+      };
+    }
 
-  // TODO: if the file storage removal fails, we might have a hanging file with no reference.
-  // Eventually, we should regularly clean up the files with no references in the image-queue
-  // database.
-  await deleteFromImageQueue(user.did, storageKey);
-  await fileStorage.remove(storageKey);
+    // TODO: if the file storage removal fails, we might have a hanging file with no reference.
+    // Eventually, we should regularly clean up the files with no references in the image-queue
+    // database.
+    await deleteFromImageQueue(user.did, storageKey);
+    await fileStorage.remove(storageKey);
+
+    return {
+      status: 200,
+      success: true,
+      message: "Image deleted successfully"
+    };
+
+  } catch (error) {
+    console.error('Delete error:', error);
+    return {
+      status: 500,
+      success: false,
+      error: error instanceof Error ? error.message : "Delete failed"
+    };
+  }
 }
 
 export async function loader({ request, params }: Route.LoaderArgs) {
@@ -155,27 +242,66 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
-  const user = await requireUser(request);
+  try {
+    const user = await requireUser(request);
 
-  switch (request.method) {
-    case 'POST':
-      await uploadImage(user, request);
-      return new Response();
-    case 'PUT':
-      if (!params.storageKey) {
-        throw new Response("Storage key is required", { status: 400 });
+    switch (request.method) {
+      case 'POST': {
+        const result = await uploadImage(user, request);
+        return Response.json(result, { status: result.status });
       }
 
-      await updateImage(user, params.storageKey, await request.formData())
-      return new Response();
-    case 'DELETE':
-      if (!params.storageKey) {
-        throw new Response("Storage key is required", { status: 400 });
+      case 'PUT': {
+        if (!params.storageKey) {
+          const result: UpdateResult = {
+            status: 400,
+            success: false,
+            error: "Storage key is required"
+          };
+          return Response.json(result, { status: result.status });
+        }
+
+        const result = await updateImage(user, params.storageKey, await request.formData());
+        return Response.json(result, { status: result.status });
       }
 
-      await deleteImage(user, params.storageKey);
-      return new Response();
-    default:
-      throw new Response(`Unsupported method: ${request.method}`, { status: 400 });
+      case 'DELETE': {
+        if (!params.storageKey) {
+          const result: DeleteResult = {
+            status: 400,
+            success: false,
+            error: "Storage key is required"
+          };
+          return Response.json(result, { status: result.status });
+        }
+
+        const result = await deleteImage(user, params.storageKey);
+        return Response.json(result, { status: result.status });
+      }
+
+      default: {
+        const result: ImageApiResult = {
+          status: 405,
+          success: false,
+          error: `Unsupported method: ${request.method}`
+        };
+        return Response.json(result, { status: result.status });
+      }
+    }
+  } catch (error) {
+    console.error('API Error:', error);
+    
+    // If it's already a Response (thrown error), return it as-is
+    if (error instanceof Response) {
+      return error;
+    }
+    
+    // Otherwise, return a generic error response
+    const result: ImageApiResult = {
+      status: 500,
+      success: false,
+      error: error instanceof Error ? error.message : "An unexpected error occurred"
+    };
+    return Response.json(result, { status: result.status });
   }
 }

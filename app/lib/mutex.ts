@@ -18,7 +18,7 @@ export function getMutex(purpose: string, uniqueKey: string): Mutex {
 }
 
 // Clean up old mutexes every 5 minutes
-setTimeout(() => {
+setInterval(() => {
   for (const [key, mutex] of mutexes.entries()) {
     if (mutex.isLocked()) {
       continue;

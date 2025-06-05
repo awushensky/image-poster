@@ -1,38 +1,24 @@
 import type { QueuedImage } from "~/model/model";
-import { getMutex } from "~/lib/mutex";
 import { useDatabase } from "./database.server";
-
-
-const MUTEX_PURPOSE = 'image-queue';
 
 export async function createImageQueueEntry(
   userDid: string,
   storageKey: string,
   postText: string
 ): Promise<QueuedImage> {
-  return await getMutex(MUTEX_PURPOSE, userDid).runExclusive(async () => await useDatabase(async db => {
-    await db.run('BEGIN TRANSACTION');
-
-    try {
-      const result = await db.get(
-        'SELECT MAX(queue_order) as max_order FROM queued_images WHERE user_did = ?',
-        [userDid]
-      ) as { max_order: number | null };
-      const nextOrder = (result.max_order || 0) + 1;
-      
-      await db.run(`
-        INSERT INTO queued_images (user_did, storage_key, post_text, queue_order)
-        VALUES (?, ?, ?, ?)
-      `, [userDid, storageKey, postText, nextOrder]);
-      
-      await db.run('COMMIT');
-    } catch (error) {
-      await db.run('ROLLBACK');
-      throw error;
-    }
+  return await useDatabase(async db => {
+    const insertedRow = await db.get(`
+      INSERT INTO queued_images (user_did, storage_key, post_text, queue_order)
+      VALUES (?, ?, ?, (
+        SELECT COALESCE(MAX(queue_order), 0) + 1 
+        FROM queued_images 
+        WHERE user_did = ?
+      ))
+      RETURNING user_did, storage_key, post_text, is_nsfw, queue_order, created_at
+    `, [userDid, storageKey, postText, userDid]) as QueuedImage;
     
-    return await readImageQueueEntry(userDid, storageKey);
-  }));
+    return insertedRow;
+  });
 }
 
 export async function readImageQueueEntry(userDid: string, storageKey: string): Promise<QueuedImage> {
@@ -55,7 +41,7 @@ export async function updateImageQueueEntry(
   storageKey: string,
   updates: Partial<Pick<QueuedImage, 'post_text' | 'is_nsfw'>>
 ): Promise<void> {
-  return await getMutex(MUTEX_PURPOSE, userDid).runExclusive(async () => await useDatabase(async db => {
+  return await useDatabase(async db => {
     const setParts = [];
     const values = [];
     
@@ -78,7 +64,7 @@ export async function updateImageQueueEntry(
       SET ${setParts.join(', ')} 
       WHERE user_did = ? AND storage_key = ?
     `, values);
-  }));
+  });
 }
 
 export async function getImageQueueForUser(userDid: string): Promise<QueuedImage[]> {
@@ -93,87 +79,73 @@ export async function reorderImageInQueue(
   sourceImageStorageKey: string,
   destinationOrder: number,
 ): Promise<void> {
-  return await getMutex(MUTEX_PURPOSE, userDid).runExclusive(async () => await useDatabase(async db => {
-    await db.run('BEGIN TRANSACTION');
+  return await useDatabase(async db => {
+    const currentImage = await db.get(
+      'SELECT queue_order FROM queued_images WHERE user_did = ? AND storage_key = ?',
+      [userDid, sourceImageStorageKey]
+    ) as {queue_order: number} | undefined;
     
+    if (!currentImage) {
+      throw new Error('Image not found');
+    }
+    
+    const sourceOrder = currentImage.queue_order;
+    if (sourceOrder === destinationOrder) {
+      return; // No change needed
+    }
+    
+    await db.run('BEGIN IMMEDIATE');
     try {
-      const currentImage = await db.get(
-        'SELECT * FROM queued_images WHERE user_did = ? AND storage_key = ?',
-        [userDid, sourceImageStorageKey]
-      ) as QueuedImage;
-      
-      if (!currentImage) {
-        throw new Error('Image not found');
-      }
-
-      const sourceOrder = currentImage.queue_order;
-      if (sourceOrder === destinationOrder) return;
-
-      // Move source image to temporary position
-      const tempOrder = Date.now() * -1;
-      await db.run(`
-        UPDATE queued_images
-        SET queue_order = ?
-        WHERE user_did = ? AND storage_key = ?
-      `, [tempOrder, userDid, currentImage.storage_key]);
-      
       if (destinationOrder < sourceOrder) {
-        // Moving left: shift from sourceOrder-1 down to destinationOrder (shift right)
-        // Process from highest to lowest to avoid conflicts
-        for (let pos = sourceOrder - 1; pos >= destinationOrder; pos--) {
-          await db.run(`
-            UPDATE queued_images
-            SET queue_order = queue_order + 1
-            WHERE user_did = ? AND queue_order = ?
-          `, [userDid, pos]);
-        }
+        // Moving left: increment everything from destination to source-1
+        await db.run(`
+          UPDATE queued_images
+          SET queue_order = queue_order + 1
+          WHERE user_did = ? AND queue_order >= ? AND queue_order < ?
+        `, [userDid, destinationOrder, sourceOrder]);
       } else {
-        // Moving right: shift from sourceOrder+1 up to destinationOrder (shift left)  
-        // Process from lowest to highest to avoid conflicts
-        for (let pos = sourceOrder + 1; pos <= destinationOrder; pos++) {
-          await db.run(`
-            UPDATE queued_images
-            SET queue_order = queue_order - 1
-            WHERE user_did = ? AND queue_order = ?
-          `, [userDid, pos]);
-        }
+        // Moving right: decrement everything from source+1 to destination
+        await db.run(`
+          UPDATE queued_images
+          SET queue_order = queue_order - 1
+          WHERE user_did = ? AND queue_order > ? AND queue_order <= ?
+        `, [userDid, sourceOrder, destinationOrder]);
       }
       
-      // Move source image to final destination
+      // Move the source image to its final position
       await db.run(`
         UPDATE queued_images
         SET queue_order = ?
         WHERE user_did = ? AND storage_key = ?
-      `, [destinationOrder, userDid, currentImage.storage_key]);
+      `, [destinationOrder, userDid, sourceImageStorageKey]);
       
       await db.run('COMMIT');
     } catch (error) {
       await db.run('ROLLBACK');
       throw error;
     }
-  }));
+  });
 }
 
+// Simplified delete function
 export async function deleteFromImageQueue(userDid: string, storageKey: string): Promise<void> {
-  return await getMutex(MUTEX_PURPOSE, userDid).runExclusive(async () => await useDatabase(async db => {
-    await db.run('BEGIN TRANSACTION');
+  return await useDatabase(async db => {
+    const imageToDelete = await db.get(
+      'SELECT queue_order FROM queued_images WHERE user_did = ? AND storage_key = ?',
+      [userDid, storageKey]
+    ) as {queue_order: number} | undefined;
     
+    if (!imageToDelete) {
+      throw new Error('Image not found');
+    }
+    
+    await db.run('BEGIN IMMEDIATE');
     try {
-      const imageToDelete = await db.get(
-        'SELECT * FROM queued_images WHERE user_did = ? AND storage_key = ?',
-        [userDid, storageKey]
-      ) as QueuedImage;
-      
-      if (!imageToDelete) {
-        throw new Error('Image not found');
-      }
-      
       await db.run(
         'DELETE FROM queued_images WHERE user_did = ? AND storage_key = ?',
         [userDid, storageKey]
       );
       
-      // Reorder remaining images to fill the gap
       await db.run(`
         UPDATE queued_images
         SET queue_order = queue_order - 1
@@ -185,7 +157,7 @@ export async function deleteFromImageQueue(userDid: string, storageKey: string):
       await db.run('ROLLBACK');
       throw error;
     }
-  }));
+  });
 }
 
 export async function getNextImageToPostForUser(userDid: string): Promise<QueuedImage | undefined> {
