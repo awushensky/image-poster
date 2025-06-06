@@ -1,9 +1,7 @@
 import { fileStorage } from './image-storage.server';
 import { postImageToBluesky } from '../auth/bluesky-auth.server';
 import { type PostingSchedule, type QueuedImage } from '../model/model';
-import {
-  getNextImageOrUpdateSchedule as getNextImageAndUpdateSchedule,
-} from '~/db/scheduler-database.server';
+import { getNextImageAndUpdateSchedule as getNextImageAndUpdateSchedule } from "~/db/image-queue-database.server";
 import { moveImageToPosted } from "~/db/posted-image-database.server";
 import { getNextExecution } from '~/lib/cron-utils';
 import { getAllActivePostingSchedulesWithTimezone, updateScheduleLastExecuted } from '~/db/posting-schedule-database.server';

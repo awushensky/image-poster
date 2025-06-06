@@ -1,7 +1,6 @@
 import ScheduleSummary from "~/components/scheduling/schedule-summary";
 import type { Route } from "./+types/dashboard";
 import { requireUser } from "~/auth/session.server";
-import { getImageQueueForUser } from "~/db/image-queue-database.server";
 import { readPostedImageEntries } from "~/db/posted-image-database.server";
 import ImageQueue from "~/components/image-queue/image-queue";
 import PostedImages from "~/components/posted-image/posted-images";
@@ -9,37 +8,33 @@ import Tabs from "~/components/tabs";
 import Header from "~/components/header";
 import { useEffect, useState } from "react";
 import Modal from "~/components/modal";
-import { estimateImageSchedule } from "~/lib/posting-time-estimator";
 import { useRevalidator } from "react-router";
-import type { ProposedPostingSchedule, ProposedQueuedImage, QueuedImage } from "~/model/model";
+import type { ProposedPostingSchedule } from "~/model/model";
 import { getUserPostingSchedules } from "~/db/posting-schedule-database.server";
 import ScheduleModalContent from "~/components/scheduling/schedule-modal-content";
 import UploadModal from "~/components/image-upload/upload-modal";
-import { deleteImage, reorderImages, updateImage } from "~/lib/dashboard-utils";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
   const schedules = await getUserPostingSchedules(user.did);
-  const loadedImages = estimateImageSchedule(await getImageQueueForUser(user.did), schedules, user.timezone);
   const postedImages = await readPostedImageEntries(user.did);
   
-  return { user, schedules, loadedImages, postedImages };
+  return { user, schedules, postedImages };
 }
 
 type TabType = 'queue' | 'posted';
 
 export default function Dashboard({ loaderData }: Route.ComponentProps) {
-  const { user, schedules, loadedImages, postedImages } = loaderData
+  const { user, schedules, postedImages } = loaderData
 
   const revalidator = useRevalidator();
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
-  const [images, setImages] = useState(loadedImages);
   const [activeTab, setActiveTab] = useState<TabType>('queue');
+  const [queueCount, setQueueCount] = useState(0);
 
   useEffect(() => {
-    // Reset state whenever loader data changes
-    setImages(loadedImages);
+    // Reset modals whenever loader data changes
     setScheduleModalOpen(false);
     setUploadModalOpen(false);
   }, [loaderData]);
@@ -110,74 +105,10 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
     setUploadModalOpen(false);
   };
 
-  const handleImagesReordered = async (storageKey: string, destinationOrder: number) => {
-    // reorder the images without the reload. this will make the UI feel more responsive.
-    setImages(estimateImageSchedule(reorderImages(images, storageKey, destinationOrder), schedules, user.timezone));
-
-    const formData = new FormData();
-    formData.append('action', 'reorder');
-    formData.append('toOrder', destinationOrder.toString());
-
-    fetch(`/api/image/${storageKey}`, {
-      method: 'PUT',
-      body: formData,
-    }).then(async response => {
-      const result = await response.json();
-      
-      if (!result.success) {
-        console.error('Failed to reorder image:', result.error);
-        // Could show an error toast here
-      }
-
-      revalidator.revalidate();
-    });
-  }
-
-  const handleImageUpdated = async (storageKey: string, update: Partial<ProposedQueuedImage>) => {
-    // update the images without a reload. this will make the UI feel more responsive.
-    setImages(estimateImageSchedule(updateImage(images, storageKey, update), schedules, user.timezone));
-
-    const formData = new FormData();
-    formData.append('action', 'update');
-    
-    if (update.postText !== undefined) {
-      formData.append('postText', update.postText);
-    }
-    if (update.isNsfw !== undefined) {
-      formData.append('isNsfw', update.isNsfw.toString());
-    }
-
-    fetch(`/api/image/${storageKey}`, {
-      method: 'PUT',
-      body: formData,
-    }).then(async response => {
-      const result = await response.json();
-      
-      if (!result.success) {
-        console.error('Failed to update image:', result.error);
-        // Could show an error toast here
-      }
-
-      revalidator.revalidate();
-    });
-  }
-
-  const handleImageDelete = async (storageKey: string) => {
-    // Delete the image without refreshing from the DB. this will make the UI feel more responsive.
-    setImages(estimateImageSchedule(deleteImage(images, storageKey), schedules, user.timezone));
-
-    fetch(`/api/image/${storageKey}`, {
-      method: 'DELETE',
-    }).then(async response => {
-      const result = await response.json();
-      if (!result.success) {
-        console.error('Failed to delete image:', result.error);
-        // Could show an error toast here
-      }
-
-      revalidator.revalidate();
-    });
-  }
+  const handleImageQueueChanged = (imageCount: number) => {
+    // Update the tab count immediately for responsive UI
+    setQueueCount(imageCount);
+  };
 
   const handleLogout = () => {
     window.location.href = '/auth/logout';
@@ -237,7 +168,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
           <div className="mb-6">
             <Tabs
               tabs={[
-                { id: 'queue', label: 'Queue', count: images.length },
+                { id: 'queue', label: 'Queue', count: queueCount },
                 { id: 'posted', label: 'Posted', count: postedImages.length }
               ]}
               activeTab={activeTab}
@@ -248,10 +179,9 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
           {/* Tab Content */}
           {activeTab === 'queue' && (
             <ImageQueue
-              images={images}
-              onImagesReordered={handleImagesReordered}
-              onImageUpdate={handleImageUpdated}
-              onImageDelete={handleImageDelete}
+              schedules={schedules}
+              userTimezone={user.timezone}
+              onChanged={handleImageQueueChanged}
             />
           )}
 

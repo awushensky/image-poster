@@ -2,15 +2,35 @@ import type { PostedImage, QueuedImage } from "~/model/model";
 import { useDatabase } from "./database.server";
 
 
+interface PostedImageRow {
+  storage_key: string;
+  user_did: string;
+  post_text: string;
+  is_nsfw: number;
+  created_at: string;
+}
+
+function transformPostedImageRow(row: PostedImageRow): PostedImage {
+  return {
+    storageKey: row.storage_key,
+    userDid: row.user_did,
+    postText: row.post_text,
+    isNsfw: Boolean(row.is_nsfw),
+    createdAt: row.created_at
+  };
+}
+
 export async function readPostedImageEntries(
   userDid: string,
 ): Promise<PostedImage[]> {
   return await useDatabase(async db => {
-    return await db.all(`
+    const rows: PostedImageRow[] = await db.all(`
       SELECT * FROM posted_images 
       WHERE user_did = ? 
       ORDER BY created_at DESC
-    `, [userDid]) as PostedImage[];
+    `, [userDid]);
+    
+    return rows.map(row => transformPostedImageRow(row));
   });
 }
 

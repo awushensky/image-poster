@@ -7,6 +7,7 @@ export default [
   route("auth/callback", "routes/auth.callback.tsx"),
   route("auth/logout", "routes/auth.logout.tsx"),
 
+  route("api/image-queue", "api/api.image-queue.ts"),
   route("api/image/:storageKey?", "api/api.image.ts"),
   route("api/posting-schedules", "api/api.posting-schedules.ts"),
   route("api/user", "api/api.user.ts"),

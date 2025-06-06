@@ -1,29 +1,61 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GripVertical } from 'lucide-react';
 import type { ImageWithEstimatedUpload } from '~/lib/posting-time-estimator';
+import { estimateImageSchedule } from '~/lib/posting-time-estimator';
+import { deleteImage, reorderImages, updateImage } from '~/lib/dashboard-utils';
 import ImageCard from './image-card';
 import Modal from '../modal';
 import EditPostModalContent from './edit-post-modal-content';
-import type { ProposedQueuedImage } from '~/model/model';
-
+import type { ProposedQueuedImage, PostingSchedule } from '~/model/model';
 
 interface ImageQueueProps {
-  images: ImageWithEstimatedUpload[];
-  onImagesReordered: (storageKey: string, destinationOrder: number) => Promise<void>;
-  onImageUpdate: (storageKey: string, update: Partial<ProposedQueuedImage>) => Promise<void>;
-  onImageDelete: (storageKey: string) => Promise<void>;
+  schedules: PostingSchedule[];
+  userTimezone: string;
+  onChanged: (imageCount: number) => void;
 }
 
 const ImageQueue = ({
-  images = [],
-  onImagesReordered,
-  onImageUpdate,
-  onImageDelete
+  schedules,
+  userTimezone,
+  onChanged
 }: ImageQueueProps) => {
+  const [images, setImages] = useState<ImageWithEstimatedUpload[]>([]);
+  const [loading, setLoading] = useState(true);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [editingImageKey, setEditingImageKey] = useState<string | null>(null);
 
+  // Load images on mount and when dependencies change
+  useEffect(() => {
+    loadImages();
+  }, [schedules, userTimezone]);
+
+  const loadImages = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/image-queue`);
+      const result = await response.json();
+      
+      if (result.success) {
+        const estimatedImages = estimateImageSchedule(result.images, schedules, userTimezone);
+        setImages(estimatedImages);
+        console.log(`Estimated images ${JSON.stringify(estimatedImages)}`);
+        onChanged(estimatedImages.length);
+      } else {
+        console.error('Failed to load images:', result.error);
+        setImages([]);
+        onChanged(0);
+      }
+    } catch (error) {
+      console.error('Failed to load images:', error);
+      setImages([]);
+      onChanged(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  console.log(`images: ${JSON.stringify(images)}`);
   const sortedImages = [...images].sort((a, b) => a.queueOrder - b.queueOrder);
   const editingImage = editingImageKey ? images.find(img => img.storageKey === editingImageKey) : null;
 
@@ -51,7 +83,27 @@ const ImageQueue = ({
     const droppedImage = sortedImages[droppedIndex];
 
     try {
-      await onImagesReordered?.(draggedImage.storageKey, droppedImage.queueOrder);
+      // Update local state immediately for responsive UI
+      const reorderedImages = reorderImages(images, draggedImage.storageKey, droppedImage.queueOrder);
+      setImages(estimateImageSchedule(reorderedImages, schedules, userTimezone));
+
+      // Make API call
+      const formData = new FormData();
+      formData.append('action', 'reorder');
+      formData.append('toOrder', droppedImage.queueOrder.toString());
+
+      const response = await fetch(`/api/image/${draggedImage.storageKey}`, {
+        method: 'PUT',
+        body: formData,
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        console.error('Failed to reorder image:', result.error);
+        // Could show an error toast here
+      }
+
+      onChanged(images.length);
     } finally {
       setDraggedIndex(null);
       setDragOverIndex(null);
@@ -71,15 +123,33 @@ const ImageQueue = ({
     setEditingImageKey(null);
   };
 
-  const handleEditSave = async (data: { text: string; isNsfw: boolean }) => {
+  const handleEditSave = async (data: ProposedQueuedImage) => {
     if (!editingImageKey) return;
 
     try {
-      await onImageUpdate?.(editingImageKey, {
-        postText: data.text,
-        isNsfw: data.isNsfw
+      // Update local state immediately for responsive UI
+      const updatedImages = updateImage(images, editingImageKey, data);
+      setImages(estimateImageSchedule(updatedImages, schedules, userTimezone));
+
+      // Make API call
+      const formData = new FormData();
+      formData.append('action', 'update');
+      formData.append('postText', data.postText);
+      formData.append('isNsfw', data.isNsfw.toString());
+
+      const response = await fetch(`/api/image/${editingImageKey}`, {
+        method: 'PUT',
+        body: formData,
       });
+
+      const result = await response.json();
+      if (!result.success) {
+        console.error('Failed to update image:', result.error);
+        // Could show an error toast here
+      }
+
       setEditingImageKey(null);
+      onChanged(images.length);
     } catch (error) {
       console.error('Failed to save post data:', error);
     }
@@ -87,8 +157,30 @@ const ImageQueue = ({
 
   const handleDelete = async (storageKey: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    await onImageDelete?.(storageKey);
+
+    try {
+      // Update local state immediately for responsive UI
+      const updatedImages = deleteImage(images, storageKey);
+      setImages(estimateImageSchedule(updatedImages, schedules, userTimezone));
+
+      // Make API call
+      const response = await fetch(`/api/image/${storageKey}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        console.error('Failed to delete image:', result.error);
+        // Could show an error toast here
+      }
+
+      onChanged(updatedImages.length);
+    } catch (error) {
+      console.error('Failed to delete image:', error);
+    }
   };
+
+  console.log(`sorted images ${JSON.stringify(sortedImages)}`);
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen relative">
@@ -106,46 +198,52 @@ const ImageQueue = ({
         </Modal>
       )}
 
-      <div className="space-y-4">
-        {sortedImages.map((image, index) => (
-          <div
-            key={image.storageKey}
-            draggable={true}
-            onDragStart={(e) => handleDragStart(e, index)}
-            onDragOver={(e) => handleDragOver(e, index)}
-            onDrop={(e) => handleDrop(e, index)}
-            onDragEnd={handleDragEnd}
-            className={`
-              relative transition-all duration-200
-              ${draggedIndex === index ? 'opacity-50 scale-95' : ''}
-              ${dragOverIndex === index && draggedIndex !== index ? 'ring-2 ring-blue-400 ring-offset-2' : ''}
-              cursor-move
-            `}
-          >
+      {loading ? (
+        <div className="text-center py-12 text-gray-500">
+          <div className="text-lg font-medium mb-2">Loading images...</div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {sortedImages.map((image, index) => (
+            <div
+              key={image.storageKey}
+              draggable={true}
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDrop={(e) => handleDrop(e, index)}
+              onDragEnd={handleDragEnd}
+              className={`
+                relative transition-all duration-200
+                ${draggedIndex === index ? 'opacity-50 scale-95' : ''}
+                ${dragOverIndex === index && draggedIndex !== index ? 'ring-2 ring-blue-400 ring-offset-2' : ''}
+                cursor-move
+              `}
+            >
 
-            {/* Drag handle overlay */}
-            <div className="absolute top-2 right-2 z-10 p-2 bg-white bg-opacity-80 rounded-md shadow-sm">
-              <GripVertical className="w-5 h-5 text-gray-400 cursor-grab active:cursor-grabbing" />
+              {/* Drag handle overlay */}
+              <div className="absolute top-2 right-2 z-10 p-2 bg-white bg-opacity-80 rounded-md shadow-sm">
+                <GripVertical className="w-5 h-5 text-gray-400 cursor-grab active:cursor-grabbing" />
+              </div>
+
+              {/* Fieldset automatically disables all form elements inside when disabled */}
+              <fieldset disabled={false} className="border-0 p-0 m-0">
+                <ImageCard
+                  image={image}
+                  onDelete={handleDelete}
+                  onEdit={handleEditOpen}
+                />
+              </fieldset>
             </div>
+          ))}
 
-            {/* Fieldset automatically disables all form elements inside when disabled */}
-            <fieldset disabled={false} className="border-0 p-0 m-0">
-              <ImageCard
-                image={image}
-                onDelete={handleDelete}
-                onEdit={handleEditOpen}
-              />
-            </fieldset>
-          </div>
-        ))}
-
-        {images.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
-            <div className="text-lg font-medium mb-2">No images uploaded yet</div>
-            <div className="text-sm">Upload some images to get started!</div>
-          </div>
-        )}
-      </div>
+          {images.length === 0 && (
+            <div className="text-center py-12 text-gray-500">
+              <div className="text-lg font-medium mb-2">No images uploaded yet</div>
+              <div className="text-sm">Upload some images to get started!</div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

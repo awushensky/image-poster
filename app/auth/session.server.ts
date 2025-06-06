@@ -2,8 +2,8 @@ import { createCookieSessionStorage } from 'react-router';
 import {
   createUserSession as createDbSession,
   deleteUserSession,
-  getUserFromSession,
 } from '~/db/user-session-database.server';
+import { getUserFromSession } from '~/db/user-database.server';
 import { isSessionValid, revokeUserSession } from './bluesky-auth.server';
 import type { User } from "~/model/model";
 

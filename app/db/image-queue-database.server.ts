@@ -5,13 +5,38 @@ import { getMutex } from "~/lib/mutex";
 
 const MUTEX_PURPOSE = "image-queue";
 
+interface QueuedImageRow {
+  storage_key: string;
+  user_did: string;
+  post_text: string;
+  is_nsfw: number;
+  queue_order: number;
+  created_at: string;
+}
+
+function maybeTransformQueuedImageRow(row: QueuedImageRow | undefined): QueuedImage | undefined {
+  if (!row) return undefined;
+  return transformQueuedImageRow(row);
+}
+
+function transformQueuedImageRow(row: QueuedImageRow): QueuedImage {
+  return {
+    storageKey: row.storage_key,
+    userDid: row.user_did,
+    postText: row.post_text,
+    isNsfw: Boolean(row.is_nsfw),
+    queueOrder: row.queue_order,
+    createdAt: row.created_at
+  };
+}
+
 export async function createImageQueueEntry(
   userDid: string,
   storageKey: string,
   postText: string
 ): Promise<QueuedImage> {
   return await useDatabase(async db => {
-    const insertedRow = await db.get(`
+    const insertedRow: QueuedImageRow = await db.get(`
       INSERT INTO queued_images (user_did, storage_key, post_text, queue_order)
       VALUES (?, ?, ?, (
         SELECT COALESCE(MAX(queue_order), 0) + 1 
@@ -19,24 +44,24 @@ export async function createImageQueueEntry(
         WHERE user_did = ?
       ))
       RETURNING user_did, storage_key, post_text, is_nsfw, queue_order, created_at
-    `, [userDid, storageKey, postText, userDid]) as QueuedImage;
+    `, [userDid, storageKey, postText, userDid]) as QueuedImageRow;
     
-    return insertedRow;
+    return transformQueuedImageRow(insertedRow);
   });
 }
 
 export async function readImageQueueEntry(userDid: string, storageKey: string): Promise<QueuedImage> {
   return await useDatabase(async db => {
-    const image = await db.get(
+    const row: QueuedImageRow | undefined = await db.get(
       'SELECT * FROM queued_images WHERE user_did = ? AND storage_key = ?',
       [userDid, storageKey]
     );
 
-    if (!image) {
+    if (!row) {
       throw new Error('Image not found in queue');
     }
     
-    return image;
+    return transformQueuedImageRow(row);
   });
 }
 
@@ -72,10 +97,12 @@ export async function updateImageQueueEntry(
 }
 
 export async function getImageQueueForUser(userDid: string): Promise<QueuedImage[]> {
-  return await useDatabase(async db => await db.all(
+  const rows: QueuedImageRow[] = await useDatabase(async db => await db.all(
     'SELECT * FROM queued_images WHERE user_did = ? ORDER BY queue_order ASC',
     [userDid]
   ));
+
+  return rows.map(transformQueuedImageRow);
 }
 
 export async function reorderImageInQueue(
@@ -170,7 +197,7 @@ export async function deleteFromImageQueue(userDid: string, storageKey: string):
 }
 
 export async function getNextImageToPostForUser(userDid: string): Promise<QueuedImage | undefined> {
-  return await useDatabase(async db => await db.get(
+  const row: QueuedImageRow | undefined = await useDatabase(async db => await db.get(
     `
       SELECT qi.*
       FROM queued_images qi
@@ -179,4 +206,31 @@ export async function getNextImageToPostForUser(userDid: string): Promise<Queued
       LIMIT 1
     `, [userDid])
   );
+
+  return maybeTransformQueuedImageRow(row);
 }
+
+export async function getNextImageAndUpdateSchedule(
+  userDid: string,
+  scheduleId: number
+): Promise<QueuedImage | undefined> {
+  return await useDatabase(async (db) => {
+    await db.run(`
+      UPDATE posting_schedules 
+      SET last_executed = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `, [scheduleId]);
+
+    const row: QueuedImageRow | undefined = await db.get(`
+      SELECT qi.*
+      FROM queued_images qi
+      WHERE qi.user_did = ?
+      ORDER BY qi.queue_order ASC
+      LIMIT 1
+    `, [userDid]);
+
+    return maybeTransformQueuedImageRow(row);
+  });
+}
+

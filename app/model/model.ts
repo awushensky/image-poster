@@ -32,7 +32,7 @@ export interface QueuedImage {
   createdAt: string;
 }
 
-export interface ProposedQueuedImage extends Omit<QueuedImage, 'storageKey' | 'queueOrder' | 'createdAt'> {};
+export interface ProposedQueuedImage extends Omit<QueuedImage, 'storageKey' | 'userDid' | 'queueOrder' | 'createdAt'> {};
 
 export interface PostedImage {
   storageKey: string;

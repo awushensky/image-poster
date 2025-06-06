@@ -1,5 +1,4 @@
 import { createHmac } from 'crypto';
-import type { User } from "~/model/model";
 import { useDatabase } from './database.server';
 
 function generateSessionToken(userDid: string): string {
@@ -31,27 +30,6 @@ export async function createUserSession(userDid: string): Promise<string> {
     `, [sessionToken, userDid]);
     
     return sessionToken;
-  });
-}
-
-export async function getUserFromSession(sessionToken: string): Promise<User | undefined> {
-  return await useDatabase(async db => {
-    const user = await db.get(`
-      SELECT u.did, u.handle, u.display_name, u.avatar_url, u.timezone, u.created_at, u.last_login
-      FROM user_sessions us
-      JOIN users u ON us.user_did = u.did
-      WHERE us.session_token = ?
-    `, [sessionToken]) as User | undefined;
-
-    if (user) {
-      await db.run(`
-        UPDATE user_sessions 
-        SET last_used_at = CURRENT_TIMESTAMP 
-        WHERE session_token = ?
-      `, [sessionToken]);
-    }
-
-    return user;
   });
 }
 

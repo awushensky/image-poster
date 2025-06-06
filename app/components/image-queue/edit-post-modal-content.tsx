@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Save, X, AlertTriangle } from 'lucide-react';
+import type { ProposedQueuedImage } from '~/model/model';
 
 interface EditPostModalContentProps {
   initialText: string;
   initialIsNsfw: boolean;
-  onSave: (data: { text: string; isNsfw: boolean }) => void;
+  onSave: (update: ProposedQueuedImage) => void;
   onCancel: () => void;
 }
 
@@ -14,18 +15,18 @@ const EditPostModalContent: React.FC<EditPostModalContentProps> = ({
   onSave,
   onCancel
 }) => {
-  const [text, setText] = useState(initialText);
+  const [postText, setPostText] = useState(initialText);
   const [isNsfw, setIsNsfw] = useState(initialIsNsfw);
 
   const handleSave = () => {
-    onSave({ text, isNsfw });
+    onSave({ postText, isNsfw });
   };
 
   const handleCancel = () => {
     onCancel();
   };
 
-  const hasChanges = text !== initialText || Boolean(isNsfw) !== Boolean(initialIsNsfw);
+  const hasChanges = postText !== initialText || Boolean(isNsfw) !== Boolean(initialIsNsfw);
 
   return (
     <div className="p-6">
@@ -34,15 +35,15 @@ const EditPostModalContent: React.FC<EditPostModalContentProps> = ({
           Post Text
         </label>
         <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
+          value={postText}
+          onChange={(e) => setPostText(e.target.value)}
           placeholder="Enter your post text..."
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
           rows={6}
           autoFocus
         />
         <p className="text-xs text-gray-500 mt-1">
-          Character count: {text.length}
+          Character count: {postText.length}
         </p>
       </div>
 
