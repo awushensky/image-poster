@@ -60,19 +60,19 @@ const ImageCard: React.FC<ImageCardProps> = ({
           </div>
 
           <div className="flex items-center justify-between">
-            {!image.is_nsfw && (
-              <div className="flex items-center text-sm text-amber-600">
-                <AlertTriangle className="w-4 h-4 mr-1" />
-                <span>Not flagged NSFW</span>
-              </div>
-            )}
-
             <div className="flex items-center text-sm text-gray-600">
               <Calendar className="w-4 h-4 mr-1" />
               <span title={image.estimatedPostTime ? image.estimatedPostTime.toLocaleString() : ''}>
                 {formatEstimatedTime(image.estimatedPostTime)}
               </span>
             </div>
+
+            {!image.is_nsfw && (
+              <div className="flex items-center text-sm text-amber-600">
+                <AlertTriangle className="w-4 h-4 mr-1" />
+                <span>Not flagged NSFW</span>
+              </div>
+            )}
           </div>
         </div>
 

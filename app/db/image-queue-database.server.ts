@@ -1,5 +1,9 @@
 import type { QueuedImage } from "~/model/model";
 import { useDatabase } from "./database.server";
+import { getMutex } from "~/lib/mutex";
+
+
+const MUTEX_PURPOSE = "image-queue";
 
 export async function createImageQueueEntry(
   userDid: string,
@@ -79,7 +83,7 @@ export async function reorderImageInQueue(
   sourceImageStorageKey: string,
   destinationOrder: number,
 ): Promise<void> {
-  return await useDatabase(async db => {
+  return await getMutex(MUTEX_PURPOSE, userDid).runExclusive(async () => await useDatabase(async db => {
     const currentImage = await db.get(
       'SELECT queue_order FROM queued_images WHERE user_did = ? AND storage_key = ?',
       [userDid, sourceImageStorageKey]
@@ -91,11 +95,18 @@ export async function reorderImageInQueue(
     
     const sourceOrder = currentImage.queue_order;
     if (sourceOrder === destinationOrder) {
-      return; // No change needed
+      return;
     }
     
     await db.run('BEGIN IMMEDIATE');
     try {
+      const tempOrder = -Math.abs(sourceOrder) - 10000;
+      await db.run(`
+        UPDATE queued_images
+        SET queue_order = ?
+        WHERE user_did = ? AND storage_key = ?
+      `, [tempOrder, userDid, sourceImageStorageKey]);
+      
       if (destinationOrder < sourceOrder) {
         // Moving left: increment everything from destination to source-1
         await db.run(`
@@ -112,7 +123,6 @@ export async function reorderImageInQueue(
         `, [userDid, sourceOrder, destinationOrder]);
       }
       
-      // Move the source image to its final position
       await db.run(`
         UPDATE queued_images
         SET queue_order = ?
@@ -124,7 +134,7 @@ export async function reorderImageInQueue(
       await db.run('ROLLBACK');
       throw error;
     }
-  });
+  }));
 }
 
 // Simplified delete function

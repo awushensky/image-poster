@@ -125,22 +125,17 @@ export async function updateScheduleLastExecuted(scheduleId: number): Promise<vo
   });
 }
 
-// FIXED: Single database connection, no nested calls, no manual transactions
 export async function updatePostingSchedules(
   userDid: string,
   schedules: ProposedPostingSchedule[]
 ): Promise<PostingSchedule[]> {
   return await useDatabase(async db => {
-    // Use immediate transaction for better concurrency
     await db.run('BEGIN IMMEDIATE');
 
     try {
-      // Delete existing schedules
       await db.run('DELETE FROM posting_schedules WHERE user_did = ?', [userDid]);
 
       const results: PostingSchedule[] = [];
-      
-      // Insert new schedules - all within the same connection
       for (const schedule of schedules) {
         const result = await db.run(`
           INSERT INTO posting_schedules (user_did, cron_expression, color, active)

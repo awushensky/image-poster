@@ -33,6 +33,8 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
   useEffect(() => {
     // Reset state whenever loader data changes
     setImages(loadedImages);
+    setScheduleModalOpen(false);
+    setUploadModalOpen(false);
   }, [loaderData]);
 
   const handleSettingsOpen = () => {
@@ -147,8 +149,6 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
       if (!result.success) {
         console.error('Failed to update image:', result.error);
         // Could show an error toast here
-      } else {
-        // revalidator.revalidate();
       }
     } catch (error) {
       console.error('Failed to update image:', error);

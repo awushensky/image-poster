@@ -30,12 +30,6 @@ export async function useDatabase<T>(
     } catch (error: any) {
       lastError = error;
       
-      console.log(`❌ Database error on attempt ${attempt}/${MAX_RETRIES}:`, {
-        message: error.message,
-        code: error.code,
-        errno: error.errno
-      });
-      
       // Check for SQLite busy conditions
       const isBusyError = 
         error.code === 'SQLITE_BUSY' || 
@@ -128,7 +122,6 @@ async function initDatabasePool(): Promise<DatabasePool> {
   };
 
   // Create all initial connections upfront to avoid creation delays
-  console.log(`🏊 Initializing pool with ${POOL_SIZE} connections...`);
   for (let i = 0; i < POOL_SIZE; i++) {
     const db = await createConnection();
     pool.connections.push(db);

@@ -6,15 +6,23 @@ import {
   processImagePosting,
 } from '~/db/scheduler-database.server';
 import { getNextExecution } from '~/lib/cron-utils';
-import { getAllActivePostingSchedulesWithTimezone } from '~/db/posting-schedule-database.server';
+import { getAllActivePostingSchedulesWithTimezone, updateScheduleLastExecuted } from '~/db/posting-schedule-database.server';
 
 class ImageScheduler {
+  private static instance: ImageScheduler | null = null;
   private isRunning = false;
   private intervalId: NodeJS.Timeout | null = null;
   private lastGlobalCheck: Date = new Date();
 
-  constructor() {
+  private constructor() {
     this.start();
+  }
+
+  public static getInstance(): ImageScheduler {
+    if (!ImageScheduler.instance) {
+      ImageScheduler.instance = new ImageScheduler();
+    }
+    return ImageScheduler.instance;
   }
 
   private start() {
@@ -48,7 +56,7 @@ class ImageScheduler {
 
   private async checkSchedules() {
     const checkStartTime = new Date();
-    console.log('🔍 Scheduler: Checking schedules...');
+    console.log(`🔍 Scheduler: Checking schedules... ${new Date()}`);
     
     try {
       // Single database call to get all active schedules
@@ -145,7 +153,7 @@ class ImageScheduler {
       
       // Even if posting fails, update last_executed to prevent retry loops
       try {
-        await updateScheduleLastExecutedOnly(schedule.id);
+        await updateScheduleLastExecuted(schedule.id);
         console.log(`📅 Updated schedule ${schedule.id} last_executed after error`);
       } catch (updateError) {
         console.error(`❌ Failed to update last_executed after error:`, updateError);
@@ -183,12 +191,17 @@ class ImageScheduler {
     await new Promise(resolve => setTimeout(resolve, 1000));
     console.log('✅ Scheduler shutdown complete');
   }
+
+  // Optional: Method to destroy the singleton instance (useful for testing)
+  public static destroyInstance() {
+    if (ImageScheduler.instance) {
+      ImageScheduler.instance.shutdown();
+      ImageScheduler.instance = null;
+    }
+  }
 }
 
-const scheduler = new ImageScheduler();
+// Export the singleton instance
+const scheduler = ImageScheduler.getInstance();
 
 export { scheduler };
-  function updateScheduleLastExecutedOnly(id: number) {
-    throw new Error('Function not implemented.');
-  }
-
