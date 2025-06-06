@@ -20,7 +20,7 @@ import { deleteImage, reorderImages, updateImage } from "~/lib/dashboard-utils";
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
   const schedules = await getUserPostingSchedules(user.did);
-  const loadedImages = await estimateImageSchedule(await getImageQueueForUser(user.did), schedules, user.timezone);
+  const loadedImages = estimateImageSchedule(await getImageQueueForUser(user.did), schedules, user.timezone);
   const postedImages = await readPostedImageEntries(user.did);
   
   return { user, schedules, loadedImages, postedImages };
