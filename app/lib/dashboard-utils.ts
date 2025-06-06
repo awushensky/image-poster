@@ -1,9 +1,23 @@
-import type { QueuedImage } from "~/model/model";
+import type { ProposedQueuedImage, QueuedImage } from "~/model/model";
 
 export function reorderImages(images: QueuedImage[], imageToReorderStorageKey: string, toOrder: number): QueuedImage[] {
   const selectedImageIndex = images.findIndex(image => image.storage_key === imageToReorderStorageKey);
   const reorderedImages = moveItem(images, selectedImageIndex, toOrder - 1)
   return updateQueueOrders(reorderedImages);
+}
+
+export function updateImage(images: QueuedImage[], imageToUpdateStorageKey: string, update: Partial<ProposedQueuedImage>) {
+  const selectedImageIndex = images.findIndex(image => image.storage_key === imageToUpdateStorageKey);
+  return images.map((image, index) => {
+    if (index === selectedImageIndex) {
+      return {
+        ...image,
+        ...update,
+      };
+    } else {
+      return image;
+    }
+  });
 }
 
 export function deleteImage(images: QueuedImage[], imageToDeleteStorageKey: string): QueuedImage[] {

@@ -5,21 +5,16 @@ import { createImageQueueEntry, deleteFromImageQueue, getImageQueueForUser, read
 import type { QueuedImage, User } from "~/model/model";
 import { FileUpload, parseFormData, type FileUploadHandler } from "@mjackson/form-data-parser";
 import { createHash } from "crypto";
+import type { ApiResult } from "./api";
 
-interface ImageApiResult {
-  status: number;
-  success?: boolean;
-  error?: string;
-  message?: string;
-}
 
-interface UploadResult extends ImageApiResult {
+interface UploadResult extends ApiResult {
   storageKey?: string;
 }
 
-interface UpdateResult extends ImageApiResult {}
+interface UpdateResult extends ApiResult {}
 
-interface DeleteResult extends ImageApiResult {}
+interface DeleteResult extends ApiResult {}
 
 function fileNameToPostText(fileName: string): string {
   const fileNameSpaces = fileName.replaceAll('_', ' ');
@@ -156,8 +151,8 @@ async function updateImage(user: User, storageKey: string, update: FormData): Pr
         };
 
       case 'update':
-        const postText = update.get("postText")?.toString();
-        const isNsfwStr = update.get("isNsfw")?.toString()?.toLowerCase();
+        const postText = update.get("post_text")?.toString();
+        const isNsfwStr = update.get("is_nsfw")?.toString()?.toLowerCase();
         const isNsfw = isNsfwStr === undefined ? undefined : isNsfwStr === "true";
 
         await updateImageQueueEntry(user.did, storageKey, { post_text: postText, is_nsfw: isNsfw });
@@ -280,7 +275,7 @@ export async function action({ request, params }: Route.ActionArgs) {
       }
 
       default: {
-        const result: ImageApiResult = {
+        const result: ApiResult = {
           status: 405,
           success: false,
           error: `Unsupported method: ${request.method}`
@@ -297,7 +292,7 @@ export async function action({ request, params }: Route.ActionArgs) {
     }
     
     // Otherwise, return a generic error response
-    const result: ImageApiResult = {
+    const result: ApiResult = {
       status: 500,
       success: false,
       error: error instanceof Error ? error.message : "An unexpected error occurred"

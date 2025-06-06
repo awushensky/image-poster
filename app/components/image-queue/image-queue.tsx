@@ -4,12 +4,13 @@ import type { ImageWithEstimatedUpload } from '~/lib/posting-time-estimator';
 import ImageCard from './image-card';
 import Modal from '../modal';
 import EditPostModalContent from './edit-post-modal-content';
+import type { ProposedQueuedImage } from '~/model/model';
 
 
 interface ImageQueueProps {
   images: ImageWithEstimatedUpload[];
   onImagesReordered: (storageKey: string, destinationOrder: number) => Promise<void>;
-  onImageUpdate: (storageKey: string, update: Partial<{ postText: string, isNsfw: boolean }>) => Promise<void>;
+  onImageUpdate: (storageKey: string, update: Partial<ProposedQueuedImage>) => Promise<void>;
   onImageDelete: (storageKey: string) => Promise<void>;
 }
 
@@ -75,8 +76,8 @@ const ImageQueue = ({
 
     try {
       await onImageUpdate?.(editingImageKey, {
-        postText: data.text,
-        isNsfw: data.isNsfw
+        post_text: data.text,
+        is_nsfw: data.isNsfw
       });
       setEditingImageKey(null);
     } catch (error) {

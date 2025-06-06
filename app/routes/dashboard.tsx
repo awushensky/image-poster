@@ -8,11 +8,11 @@ import { useEffect, useState } from "react";
 import Modal from "~/components/modal";
 import { estimateImageSchedule } from "~/lib/posting-time-estimator";
 import { useRevalidator } from "react-router";
-import type { ProposedPostingSchedule } from "~/model/model";
+import type { ProposedPostingSchedule, QueuedImage } from "~/model/model";
 import { getUserPostingSchedules } from "~/db/posting-schedule-database.server";
 import ScheduleModalContent from "~/components/scheduling/schedule-modal-content";
 import UploadModal from "~/components/image-upload/upload-modal";
-import { deleteImage, reorderImages } from "~/lib/dashboard-utils";
+import { deleteImage, reorderImages, updateImage } from "~/lib/dashboard-utils";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
@@ -119,44 +119,44 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
       
       if (!result.success) {
         console.error('Failed to reorder image:', result.error);
-        revalidator.revalidate();
         // Could show an error toast here
-      } else {
-        revalidator.revalidate();
       }
+
+      revalidator.revalidate();
     });
   }
 
-  const handleImageUpdated = async (storageKey: string, update: Partial<{ postText: string, isNsfw: boolean }>) => {
-    try {
-      const formData = new FormData();
-      formData.append('action', 'update');
-      
-      if (update.postText !== undefined) {
-        formData.append('postText', update.postText);
-      }
-      if (update.isNsfw !== undefined) {
-        formData.append('isNsfw', update.isNsfw.toString());
-      }
+  const handleImageUpdated = async (storageKey: string, update: Partial<Omit<QueuedImage, 'storage_key' | 'queue_order' | 'created_at'>>) => {
+    // update the images without a reload. this will make the UI feel more responsive.
+    setImages(estimateImageSchedule(updateImage(images, storageKey, update), schedules, user.timezone));
 
-      const response = await fetch(`/api/image/${storageKey}`, {
-        method: 'PUT',
-        body: formData,
-      });
+    const formData = new FormData();
+    formData.append('action', 'update');
+    
+    if (update.post_text !== undefined) {
+      formData.append('post_text', update.post_text);
+    }
+    if (update.is_nsfw !== undefined) {
+      formData.append('is_nsfw', update.is_nsfw.toString());
+    }
 
+    fetch(`/api/image/${storageKey}`, {
+      method: 'PUT',
+      body: formData,
+    }).then(async response => {
       const result = await response.json();
       
       if (!result.success) {
         console.error('Failed to update image:', result.error);
         // Could show an error toast here
       }
-    } catch (error) {
-      console.error('Failed to update image:', error);
-      // Could show an error toast here
-    }
+
+      revalidator.revalidate();
+    });
   }
 
   const handleImageDelete = async (storageKey: string) => {
+    // Delete the image without refreshing from the DB. this will make the UI feel more responsive.
     setImages(estimateImageSchedule(deleteImage(images, storageKey), schedules, user.timezone));
 
     fetch(`/api/image/${storageKey}`, {
@@ -166,9 +166,9 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
       if (!result.success) {
         console.error('Failed to delete image:', result.error);
         // Could show an error toast here
-      } else {
-        // revalidator.revalidate();
       }
+
+      revalidator.revalidate();
     });
   }
 

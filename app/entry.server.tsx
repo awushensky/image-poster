@@ -6,8 +6,10 @@ import { ServerRouter } from "react-router";
 import { isbot } from "isbot";
 import type { RenderToPipeableStreamOptions } from "react-dom/server";
 import { renderToPipeableStream } from "react-dom/server";
+import { ImageScheduler } from "./service/scheduler.server";
 
-import "./service/scheduler.server";
+// Start the image scheduler
+ImageScheduler.getInstance().start();
 
 export const streamTimeout = 5_000;
 

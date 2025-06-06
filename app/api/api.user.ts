@@ -2,30 +2,24 @@ import { requireUser } from "~/auth/session.server";
 import type { Route } from "./+types/api.user";
 import type { User } from "~/model/model";
 import { createOrUpdateUser } from "~/db/user-database.server";
+import type { ApiResult } from "./api";
 
 
-interface UserApiResult {
-  status: number;
-  success?: boolean;
-  error?: string;
-  message?: string;
-}
-
-interface UpdateUserResult extends UserApiResult {
+interface UpdateUserResult extends ApiResult {
   user?: User
 }
 
 async function updateUser(user: User, request: Request): Promise<UpdateUserResult> {
   try {
     const body = await request.json();
-    const { timezone, handle, displayName, avatarUrl } = body;
+    const { timezone, handle, display_name, avatar_url } = body as Partial<User>;
 
     const updatedUser = await createOrUpdateUser(
       user.did,
       handle ? handle.toString() : user.handle,
       timezone ? timezone.toString() : user.timezone,
-      displayName ? displayName.toString() : user.display_name,
-      avatarUrl ? avatarUrl.toString() : user.avatar_url,
+      display_name ? display_name.toString() : user.display_name,
+      avatar_url ? avatar_url.toString() : user.avatar_url,
     );
 
     return {
@@ -35,7 +29,6 @@ async function updateUser(user: User, request: Request): Promise<UpdateUserResul
       message: "Image uploaded successfully"
     };
   } catch (error) {
-    console.log('Error parsing update', error);
     return {
       status: 400,
       success: false,
@@ -53,7 +46,7 @@ export async function action({ request }: Route.ActionArgs) {
       return Response.json(result, { status: result.status });
     }
     default: {
-      const result: UserApiResult = {
+      const result: ApiResult = {
         status: 405,
         success: false,
         error: `Unsupported method: ${request.method}`

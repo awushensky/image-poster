@@ -1,26 +1,41 @@
 import { requireUser } from "~/auth/session.server";
 import type { Route } from "./+types/api.posting-schedules";
 import { updatePostingSchedules } from "~/db/posting-schedule-database.server";
-import type { ProposedPostingSchedule, User } from "~/model/model";
+import type { PostingSchedule, ProposedPostingSchedule, User } from "~/model/model";
+import type { ApiResult } from "./api";
 
-async function updateSchedules(user: User, request: Request) {
+
+interface PostingScheduleUpdateResult extends ApiResult {
+  schedules?: PostingSchedule[];
+}
+
+async function updateSchedules(user: User, request: Request): Promise<PostingScheduleUpdateResult> {
   try {
     const body = await request.json();
     const schedules = body.schedules as ProposedPostingSchedule[];
     
     if (!schedules) {
-      console.log('Error parsing update, no "schedules" parameter found');
-      throw new Response("Invalid updated schedule", {
+      return {
         status: 400,
-      });
+        success: false,
+        error: "Missing schedules parameter"
+      };
     }
 
-    return await updatePostingSchedules(user.did, schedules);
+    const updatedSchedules = await updatePostingSchedules(user.did, schedules);
+
+    return {
+      status: 200,
+      success: true,
+      schedules: updatedSchedules,
+      message: "Image uploaded successfully"
+    };
   } catch (error) {
-    console.log('Error parsing update', error);
-    throw new Response("Invalid schedule format", {
+    return {
       status: 400,
-    });
+      success: false,
+      error: "Error parsing schedules"
+    };
   }
 }
 
@@ -28,9 +43,17 @@ export async function action({ request }: Route.ActionArgs) {
   const user = await requireUser(request);
 
   switch (request.method) {
-    case 'POST':
-      return new Response(JSON.stringify(await updateSchedules(user, request)));
-    default:
-      throw new Response(`Unsupported method: ${request.method}`, { status: 400 });
+    case 'POST': {
+      const result = await updateSchedules(user, request);
+      return Response.json(result, { status: result.status });
+    }
+    default: {
+      const result: ApiResult = {
+        status: 405,
+        success: false,
+        error: `Unsupported method: ${request.method}`
+      };
+      return Response.json(result, { status: result.status });
+    }
   }
 }

@@ -32,6 +32,8 @@ export interface QueuedImage {
   created_at: string;
 }
 
+export interface ProposedQueuedImage extends Omit<QueuedImage, 'storage_key' | 'queue_order' | 'created_at'> {};
+
 export interface PostedImage {
   storage_key: string;
   user_did: string;

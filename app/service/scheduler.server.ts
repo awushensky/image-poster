@@ -8,8 +8,12 @@ import {
 import { getNextExecution } from '~/lib/cron-utils';
 import { getAllActivePostingSchedulesWithTimezone, updateScheduleLastExecuted } from '~/db/posting-schedule-database.server';
 
+
+declare global {
+  var __imageSchedulerInstance: ImageScheduler | undefined;
+}
+
 class ImageScheduler {
-  private static instance: ImageScheduler | null = null;
   private isRunning = false;
   private intervalId: NodeJS.Timeout | null = null;
   private lastGlobalCheck: Date = new Date();
@@ -19,13 +23,13 @@ class ImageScheduler {
   }
 
   public static getInstance(): ImageScheduler {
-    if (!ImageScheduler.instance) {
-      ImageScheduler.instance = new ImageScheduler();
+    if (!global.__imageSchedulerInstance) {
+      global.__imageSchedulerInstance = new ImageScheduler();
     }
-    return ImageScheduler.instance;
+    return global.__imageSchedulerInstance;
   }
 
-  private start() {
+  public start() {
     if (this.isRunning) return;
     
     this.isRunning = true;
@@ -194,14 +198,15 @@ class ImageScheduler {
 
   // Optional: Method to destroy the singleton instance (useful for testing)
   public static destroyInstance() {
-    if (ImageScheduler.instance) {
-      ImageScheduler.instance.shutdown();
-      ImageScheduler.instance = null;
+    if (global.__imageSchedulerInstance) {
+      global.__imageSchedulerInstance.shutdown();
+      global.__imageSchedulerInstance = undefined;
     }
   }
 }
 
-// Export the singleton instance
-const scheduler = ImageScheduler.getInstance();
+// Export the class and a getter function, not a direct instance
+export { ImageScheduler };
 
-export { scheduler };
+// Export a function that returns the singleton instance
+export const getScheduler = () => ImageScheduler.getInstance();
