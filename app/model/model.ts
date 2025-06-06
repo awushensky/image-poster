@@ -37,5 +37,7 @@ export interface ProposedQueuedImage extends Omit<QueuedImage, 'storageKey' | 'q
 export interface PostedImage {
   storageKey: string;
   userDid: string;
+  postText: string;
+  isNsfw: boolean;
   createdAt: string;
 }

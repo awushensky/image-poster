@@ -283,6 +283,8 @@ export async function setupTables(db: SqliteDatabase) {
       CREATE TABLE IF NOT EXISTS posted_images (
         storage_key TEXT PRIMARY KEY,
         user_did TEXT NOT NULL,
+        post_text TEXT NOT NULL,
+        is_nsfw BOOLEAN DEFAULT TRUE NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_did) REFERENCES users (did) ON DELETE CASCADE
       );

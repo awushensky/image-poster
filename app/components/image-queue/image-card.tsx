@@ -1,7 +1,7 @@
 import React from 'react';
 import { Calendar, AlertTriangle, Trash2, Edit3 } from 'lucide-react';
 import type { ImageWithEstimatedUpload } from '~/lib/posting-time-estimator';
-import { formatFutureTime } from '~/lib/time-utils';
+import { formatRelativeTime } from '~/lib/time-utils';
 
 interface ImageCardProps {
   image: ImageWithEstimatedUpload;
@@ -50,7 +50,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
             <div className="flex items-center text-sm text-gray-600">
               <Calendar className="w-4 h-4 mr-1" />
               <span title={image.estimatedPostTime ? image.estimatedPostTime.toLocaleString() : ''}>
-                {formatFutureTime(image.estimatedPostTime)}
+                {formatRelativeTime(image.estimatedPostTime)}
               </span>
             </div>
 

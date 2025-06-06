@@ -1,4 +1,4 @@
-import { fileStorage } from "~/lib/image-storage.server";
+import { fileStorage } from "~/service/image-storage.server";
 import type { Route } from "./+types/api.image";
 import { requireUser } from "~/auth/session.server";
 import { createImageQueueEntry, deleteFromImageQueue, getImageQueueForUser, readImageQueueEntry, reorderImageInQueue, updateImageQueueEntry } from "~/db/image-queue-database.server";

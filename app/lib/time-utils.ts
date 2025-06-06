@@ -45,34 +45,42 @@ export function formatTime(hour: number, minute: number): string {
   return `${displayHour}:${displayMinute}`;
 };
 
-export function formatFutureTime(futureDate?: Date, currentDate: Date = new Date()) {
-  if (!futureDate) return 'Not scheduled';
-  const diffMs = futureDate.getTime() - currentDate.getTime();
+export function formatRelativeTime(date?: Date, referenceDate: Date = new Date()) {
+  if (!date) return 'Not scheduled';
   
-  // Handle past dates or very close dates
-  if (diffMs <= 0) {
+  const diffMs = date.getTime() - referenceDate.getTime();
+  const absDiffMs = Math.abs(diffMs);
+  const isPast = diffMs < 0;
+  
+  // Handle very close dates (within 1 second)
+  if (absDiffMs < 1000) {
     return 'now';
   }
   
   // Convert to different time units
-  const seconds = Math.floor(diffMs / 1000);
+  const seconds = Math.floor(absDiffMs / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  // Return appropriate human-readable format
+  // Format based on time unit and whether it's past or future
   if (seconds < 60) {
-    return `in ${seconds} second${seconds === 1 ? '' : 's'}`;
+    const unit = seconds === 1 ? 'second' : 'seconds';
+    return isPast ? `${seconds} ${unit} ago` : `in ${seconds} ${unit}`;
   } else if (minutes < 60) {
-    return `in ${minutes} minute${minutes === 1 ? '' : 's'}`;
+    const unit = minutes === 1 ? 'minute' : 'minutes';
+    return isPast ? `${minutes} ${unit} ago` : `in ${minutes} ${unit}`;
   } else if (hours < 24) {
-    return `in ${hours} hour${hours === 1 ? '' : 's'}`;
+    const unit = hours === 1 ? 'hour' : 'hours';
+    return isPast ? `${hours} ${unit} ago` : `in ${hours} ${unit}`;
   } else if (days === 1) {
-    return 'tomorrow';
+    return isPast ? 'yesterday' : 'tomorrow';
   } else if (days < 7) {
-    return `in ${days} day${days === 1 ? '' : 's'}`;
+    const unit = days === 1 ? 'day' : 'days';
+    return isPast ? `${days} ${unit} ago` : `in ${days} ${unit}`;
   } else {
     const weeks = Math.floor(days / 7);
-    return `in ${weeks} week${weeks === 1 ? '' : 's'}`;
+    const unit = weeks === 1 ? 'week' : 'weeks';
+    return isPast ? `${weeks} ${unit} ago` : `in ${weeks} ${unit}`;
   }
 }

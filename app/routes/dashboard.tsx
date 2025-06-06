@@ -2,7 +2,10 @@ import ScheduleSummary from "~/components/scheduling/schedule-summary";
 import type { Route } from "./+types/dashboard";
 import { requireUser } from "~/auth/session.server";
 import { getImageQueueForUser } from "~/db/image-queue-database.server";
+import { readPostedImageEntries } from "~/db/posted-image-database.server";
 import ImageQueue from "~/components/image-queue/image-queue";
+import PostedImages from "~/components/posted-image/posted-images";
+import Tabs from "~/components/tabs";
 import Header from "~/components/header";
 import { useEffect, useState } from "react";
 import Modal from "~/components/modal";
@@ -18,17 +21,21 @@ export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
   const schedules = await getUserPostingSchedules(user.did);
   const loadedImages = await estimateImageSchedule(await getImageQueueForUser(user.did), schedules, user.timezone);
+  const postedImages = await readPostedImageEntries(user.did);
   
-  return { user, schedules, loadedImages };
+  return { user, schedules, loadedImages, postedImages };
 }
 
+type TabType = 'queue' | 'posted';
+
 export default function Dashboard({ loaderData }: Route.ComponentProps) {
-  const { user, schedules, loadedImages } = loaderData
+  const { user, schedules, loadedImages, postedImages } = loaderData
 
   const revalidator = useRevalidator();
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [images, setImages] = useState(loadedImages);
+  const [activeTab, setActiveTab] = useState<TabType>('queue');
 
   useEffect(() => {
     // Reset state whenever loader data changes
@@ -211,10 +218,10 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
           onEdit={() => setScheduleModalOpen(true)}
         />
 
-        {/* Image Queue Section with Upload Button */}
+        {/* Images Section with Tabs */}
         <div className="mt-8">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Image Queue</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Images</h2>
             <button
               onClick={() => setUploadModalOpen(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
@@ -226,12 +233,33 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
             </button>
           </div>
 
-          <ImageQueue
-            images={images}
-            onImagesReordered={handleImagesReordered}
-            onImageUpdate={handleImageUpdated}
-            onImageDelete={handleImageDelete}
-          />
+          {/* Tab Navigation */}
+          <div className="mb-6">
+            <Tabs
+              tabs={[
+                { id: 'queue', label: 'Queue', count: images.length },
+                { id: 'posted', label: 'Posted', count: postedImages.length }
+              ]}
+              activeTab={activeTab}
+              onTabChange={(tabId) => setActiveTab(tabId as TabType) }
+            />
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'queue' && (
+            <ImageQueue
+              images={images}
+              onImagesReordered={handleImagesReordered}
+              onImageUpdate={handleImageUpdated}
+              onImageDelete={handleImageDelete}
+            />
+          )}
+
+          {activeTab === 'posted' && (
+            <PostedImages
+              images={postedImages}
+            />
+          )}
         </div>
       </main>
     </div>
