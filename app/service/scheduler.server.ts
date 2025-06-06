@@ -3,7 +3,7 @@ import { postImageToBluesky } from '../auth/bluesky-auth.server';
 import { type PostingSchedule, type QueuedImage } from '../model/model';
 import {
   getNextImageOrUpdateSchedule as getNextImageAndUpdateSchedule,
-  processImagePosting,
+  moveImageToPosted,
 } from '~/db/scheduler-database.server';
 import { getNextExecution } from '~/lib/cron-utils';
 import { getAllActivePostingSchedulesWithTimezone, updateScheduleLastExecuted } from '~/db/posting-schedule-database.server';
@@ -121,7 +121,7 @@ class ImageScheduler {
       );
 
       // Single database transaction: move to posted, reorder queue
-      await processImagePosting(userDid, nextImage.storage_key);
+      await moveImageToPosted(userDid, nextImage.storage_key);
     } catch (error) {
       // Even if posting fails, update last_executed to prevent retry loops
       await updateScheduleLastExecuted(schedule.id);

@@ -2,10 +2,9 @@ import type { QueuedImage } from "~/model/model";
 import { useDatabase } from "./database.server";
 
 /**
- * Process a complete image posting operation atomically
- * This includes: moving image from queue to posted, reordering queue, and updating schedule
+ * Move an image from the posting queue to the posted list
  */
-export async function processImagePosting(
+export async function moveImageToPosted(
   userDid: string,
   storageKey: string,
 ): Promise<void> {
