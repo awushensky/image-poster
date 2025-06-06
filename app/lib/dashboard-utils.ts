@@ -1,13 +1,13 @@
 import type { ProposedQueuedImage, QueuedImage } from "~/model/model";
 
 export function reorderImages(images: QueuedImage[], imageToReorderStorageKey: string, toOrder: number): QueuedImage[] {
-  const selectedImageIndex = images.findIndex(image => image.storage_key === imageToReorderStorageKey);
+  const selectedImageIndex = images.findIndex(image => image.storageKey === imageToReorderStorageKey);
   const reorderedImages = moveItem(images, selectedImageIndex, toOrder - 1)
   return updateQueueOrders(reorderedImages);
 }
 
 export function updateImage(images: QueuedImage[], imageToUpdateStorageKey: string, update: Partial<ProposedQueuedImage>) {
-  const selectedImageIndex = images.findIndex(image => image.storage_key === imageToUpdateStorageKey);
+  const selectedImageIndex = images.findIndex(image => image.storageKey === imageToUpdateStorageKey);
   return images.map((image, index) => {
     if (index === selectedImageIndex) {
       return {
@@ -21,7 +21,7 @@ export function updateImage(images: QueuedImage[], imageToUpdateStorageKey: stri
 }
 
 export function deleteImage(images: QueuedImage[], imageToDeleteStorageKey: string): QueuedImage[] {
-  const selectedImageIndex = images.findIndex(image => image.storage_key === imageToDeleteStorageKey);
+  const selectedImageIndex = images.findIndex(image => image.storageKey === imageToDeleteStorageKey);
   const updatedImages = images.filter((_, i) => i !== selectedImageIndex);
   return updateQueueOrders(updatedImages);
 }
@@ -36,6 +36,6 @@ function moveItem<T>(array: T[], fromIndex: number, toIndex: number): T[] {
 function updateQueueOrders(images: QueuedImage[]): QueuedImage[] {
   return images.map((image, index) => ({
     ...image,
-    queue_order: index + 1
+    queueOrder: index + 1
   }));
 }

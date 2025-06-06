@@ -1,4 +1,4 @@
-import type { QueuedImage } from "~/model/model";
+import type { ProposedQueuedImage, QueuedImage } from "~/model/model";
 import { useDatabase } from "./database.server";
 import { getMutex } from "~/lib/mutex";
 
@@ -43,20 +43,20 @@ export async function readImageQueueEntry(userDid: string, storageKey: string): 
 export async function updateImageQueueEntry(
   userDid: string,
   storageKey: string,
-  updates: Partial<Pick<QueuedImage, 'post_text' | 'is_nsfw'>>
+  updates: Partial<ProposedQueuedImage>
 ): Promise<void> {
   return await useDatabase(async db => {
     const setParts = [];
     const values = [];
     
-    if (updates.post_text !== undefined) {
+    if (updates.postText !== undefined) {
       setParts.push('post_text = ?');
-      values.push(updates.post_text);
+      values.push(updates.postText);
     }
     
-    if (updates.is_nsfw !== undefined) {
+    if (updates.isNsfw !== undefined) {
       setParts.push('is_nsfw = ?');
-      values.push(updates.is_nsfw);
+      values.push(updates.isNsfw);
     }
     
     if (setParts.length === 0) return;
@@ -137,7 +137,6 @@ export async function reorderImageInQueue(
   }));
 }
 
-// Simplified delete function
 export async function deleteFromImageQueue(userDid: string, storageKey: string): Promise<void> {
   return await useDatabase(async db => {
     const imageToDelete = await db.get(

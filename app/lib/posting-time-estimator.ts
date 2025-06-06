@@ -19,7 +19,7 @@ export function estimateImageSchedule(
   }
 
   const executionDates = getNextExecutionsForMultipleSchedules(
-    schedules.map(schedule => schedule.cron_expression),
+    schedules.map(schedule => schedule.cronExpression),
     timezone,
     queuedImages.length
   )

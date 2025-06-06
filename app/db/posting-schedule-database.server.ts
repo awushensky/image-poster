@@ -10,13 +10,13 @@ export async function getUserPostingSchedules(userDid: string): Promise<PostingS
 
     return rows.map(row => ({
       id: row.id,
-      user_did: row.user_did,
-      cron_expression: row.cron_expression,
+      userDid: row.user_did,
+      cronExpression: row.cron_expression,
       color: row.color,
       active: row.active !== 0,
-      last_executed: row.last_executed ? new Date(row.last_executed) : undefined,
-      created_at: new Date(row.created_at),
-      updated_at: new Date(row.updated_at),
+      lastExecuted: row.last_executed ? new Date(row.last_executed) : undefined,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
     })) as PostingSchedule[];
   });
 }
@@ -35,13 +35,13 @@ export async function getAllActivePostingSchedules(): Promise<(PostingSchedule &
 
     return rows.map(row => ({
       id: row.id,
-      user_did: row.user_did,
-      cron_expression: row.cron_expression,
+      userDid: row.user_did,
+      cronExpression: row.cron_expression,
       color: row.color,
       active: row.active !== 0,
-      last_executed: row.last_executed ? new Date(row.last_executed) : undefined,
-      created_at: new Date(row.created_at),
-      updated_at: new Date(row.updated_at),
+      lastExecuted: row.last_executed ? new Date(row.last_executed) : undefined,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
       timezone: row.timezone
     })) as (PostingSchedule & { timezone: string })[];
   });
@@ -61,13 +61,13 @@ export async function getAllActivePostingSchedulesWithTimezone(): Promise<(Posti
 
     return rows.map(row => ({
       id: row.id,
-      user_did: row.user_did,
-      cron_expression: row.cron_expression,
+      userDid: row.user_did,
+      cronExpression: row.cron_expression,
       color: row.color,
       active: row.active !== 0,
-      last_executed: row.last_executed ? new Date(row.last_executed) : undefined,
-      created_at: new Date(row.created_at),
-      updated_at: new Date(row.updated_at),
+      lastExecuted: row.last_executed ? new Date(row.last_executed) : undefined,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
       timezone: row.timezone
     })) as (PostingSchedule & { timezone: string })[];
   });
@@ -96,20 +96,18 @@ export async function addPostingSchedule(
     const result = await db.run(`
       INSERT INTO posting_schedules (user_did, cron_expression, color, active)
       VALUES (?, ?, ?, ?)
-    `, [userDid, schedule.cron_expression, schedule.color, schedule.active]);
+    `, [userDid, schedule.cronExpression, schedule.color, schedule.active]);
 
     if (!result.lastID) {
       throw new Error('Failed to insert posting schedule');
     }
 
     return {
+      ...schedule,
       id: result.lastID,
-      user_did: userDid,
-      cron_expression: schedule.cron_expression,
-      color: schedule.color,
-      active: schedule.active,
-      created_at: new Date(),
-      updated_at: new Date(),
+      userDid: userDid,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
   });
 }
@@ -140,7 +138,7 @@ export async function updatePostingSchedules(
         const result = await db.run(`
           INSERT INTO posting_schedules (user_did, cron_expression, color, active)
           VALUES (?, ?, ?, ?)
-        `, [userDid, schedule.cron_expression, schedule.color, schedule.active]);
+        `, [userDid, schedule.cronExpression, schedule.color, schedule.active]);
 
         if (!result.lastID) {
           throw new Error('Failed to insert posting schedule');
@@ -148,12 +146,12 @@ export async function updatePostingSchedules(
 
         results.push({
           id: result.lastID,
-          user_did: userDid,
-          cron_expression: schedule.cron_expression,
+          userDid: userDid,
+          cronExpression: schedule.cronExpression,
           color: schedule.color,
           active: schedule.active,
-          created_at: new Date(),
-          updated_at: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
         });
       }
 
@@ -163,93 +161,5 @@ export async function updatePostingSchedules(
       await db.run('ROLLBACK');
       throw error;
     }
-  });
-}
-
-// Alternative bulk upsert version for better performance
-export async function updatePostingSchedulesBulk(
-  userDid: string,
-  schedules: ProposedPostingSchedule[]
-): Promise<PostingSchedule[]> {
-  return await useDatabase(async db => {
-    await db.run('BEGIN IMMEDIATE');
-
-    try {
-      // Delete existing schedules
-      await db.run('DELETE FROM posting_schedules WHERE user_did = ?', [userDid]);
-
-      if (schedules.length === 0) {
-        await db.run('COMMIT');
-        return [];
-      }
-
-      // Bulk insert using a single SQL statement
-      const values = schedules.map(() => '(?, ?, ?, ?)').join(', ');
-      const params = schedules.flatMap(s => [userDid, s.cron_expression, s.color, s.active]);
-      
-      await db.run(`
-        INSERT INTO posting_schedules (user_did, cron_expression, color, active)
-        VALUES ${values}
-      `, params);
-
-      // Get the inserted schedules
-      const insertedSchedules = await db.all(
-        'SELECT * FROM posting_schedules WHERE user_did = ? ORDER BY id',
-        [userDid]
-      );
-
-      await db.run('COMMIT');
-
-      return insertedSchedules.map(row => ({
-        id: row.id,
-        user_did: row.user_did,
-        cron_expression: row.cron_expression,
-        color: row.color,
-        active: row.active !== 0,
-        last_executed: row.last_executed ? new Date(row.last_executed) : undefined,
-        created_at: new Date(row.created_at),
-        updated_at: new Date(row.updated_at),
-      })) as PostingSchedule[];
-    } catch (error) {
-      await db.run('ROLLBACK');
-      throw error;
-    }
-  });
-}
-
-// Utility function for single schedule updates
-export async function updateSinglePostingSchedule(
-  scheduleId: number,
-  updates: Partial<Pick<PostingSchedule, 'cron_expression' | 'color' | 'active'>>
-): Promise<void> {
-  return await useDatabase(async db => {
-    const setParts = [];
-    const values = [];
-    
-    if (updates.cron_expression !== undefined) {
-      setParts.push('cron_expression = ?');
-      values.push(updates.cron_expression);
-    }
-    
-    if (updates.color !== undefined) {
-      setParts.push('color = ?');
-      values.push(updates.color);
-    }
-    
-    if (updates.active !== undefined) {
-      setParts.push('active = ?');
-      values.push(updates.active);
-    }
-    
-    if (setParts.length === 0) return;
-    
-    setParts.push('updated_at = CURRENT_TIMESTAMP');
-    values.push(scheduleId);
-    
-    await db.run(`
-      UPDATE posting_schedules 
-      SET ${setParts.join(', ')} 
-      WHERE id = ?
-    `, values);
   });
 }

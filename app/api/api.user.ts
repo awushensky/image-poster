@@ -12,14 +12,14 @@ interface UpdateUserResult extends ApiResult {
 async function updateUser(user: User, request: Request): Promise<UpdateUserResult> {
   try {
     const body = await request.json();
-    const { timezone, handle, display_name, avatar_url } = body as Partial<User>;
+    const { timezone, handle, displayName, avatarUrl } = body as Partial<User>;
 
     const updatedUser = await createOrUpdateUser(
       user.did,
       handle ? handle.toString() : user.handle,
       timezone ? timezone.toString() : user.timezone,
-      display_name ? display_name.toString() : user.display_name,
-      avatar_url ? avatar_url.toString() : user.avatar_url,
+      displayName ? displayName.toString() : user.displayName,
+      avatarUrl ? avatarUrl.toString() : user.avatarUrl,
     );
 
     return {

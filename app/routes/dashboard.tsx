@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import Modal from "~/components/modal";
 import { estimateImageSchedule } from "~/lib/posting-time-estimator";
 import { useRevalidator } from "react-router";
-import type { ProposedPostingSchedule, QueuedImage } from "~/model/model";
+import type { ProposedPostingSchedule, ProposedQueuedImage, QueuedImage } from "~/model/model";
 import { getUserPostingSchedules } from "~/db/posting-schedule-database.server";
 import ScheduleModalContent from "~/components/scheduling/schedule-modal-content";
 import UploadModal from "~/components/image-upload/upload-modal";
@@ -126,18 +126,18 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
     });
   }
 
-  const handleImageUpdated = async (storageKey: string, update: Partial<Omit<QueuedImage, 'storage_key' | 'queue_order' | 'created_at'>>) => {
+  const handleImageUpdated = async (storageKey: string, update: Partial<ProposedQueuedImage>) => {
     // update the images without a reload. this will make the UI feel more responsive.
     setImages(estimateImageSchedule(updateImage(images, storageKey, update), schedules, user.timezone));
 
     const formData = new FormData();
     formData.append('action', 'update');
     
-    if (update.post_text !== undefined) {
-      formData.append('post_text', update.post_text);
+    if (update.postText !== undefined) {
+      formData.append('postText', update.postText);
     }
-    if (update.is_nsfw !== undefined) {
-      formData.append('is_nsfw', update.is_nsfw.toString());
+    if (update.isNsfw !== undefined) {
+      formData.append('isNsfw', update.isNsfw.toString());
     }
 
     fetch(`/api/image/${storageKey}`, {

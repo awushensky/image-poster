@@ -36,16 +36,16 @@ export default function Header({ user, onSettingsClick, onLogoutClick }: HeaderP
               onClick={() => setDropdownOpen(!dropdownOpen)}
               className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
             >
-              {user.avatar_url
+              {user.avatarUrl
                 ? <img
-                    src={user.avatar_url}
-                    alt={user.display_name || user.handle}
+                    src={user.avatarUrl}
+                    alt={user.displayName || user.handle}
                     className="w-8 h-8 rounded-full"
                   />
                 : <UserIcon className="w-8 h-8 text-gray-500" />
               }
               <span className="text-sm text-gray-700 hidden sm:block">
-                {user.display_name || user.handle}
+                {user.displayName || user.handle}
               </span>
             </button>
 

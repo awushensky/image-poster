@@ -24,8 +24,8 @@ const ImageQueue = ({
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [editingImageKey, setEditingImageKey] = useState<string | null>(null);
 
-  const sortedImages = [...images].sort((a, b) => a.queue_order - b.queue_order);
-  const editingImage = editingImageKey ? images.find(img => img.storage_key === editingImageKey) : null;
+  const sortedImages = [...images].sort((a, b) => a.queueOrder - b.queueOrder);
+  const editingImage = editingImageKey ? images.find(img => img.storageKey === editingImageKey) : null;
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
     setDraggedIndex(index);
@@ -51,7 +51,7 @@ const ImageQueue = ({
     const droppedImage = sortedImages[droppedIndex];
 
     try {
-      await onImagesReordered?.(draggedImage.storage_key, droppedImage.queue_order);
+      await onImagesReordered?.(draggedImage.storageKey, droppedImage.queueOrder);
     } finally {
       setDraggedIndex(null);
       setDragOverIndex(null);
@@ -76,8 +76,8 @@ const ImageQueue = ({
 
     try {
       await onImageUpdate?.(editingImageKey, {
-        post_text: data.text,
-        is_nsfw: data.isNsfw
+        postText: data.text,
+        isNsfw: data.isNsfw
       });
       setEditingImageKey(null);
     } catch (error) {
@@ -98,8 +98,8 @@ const ImageQueue = ({
           title="Edit Post Text"
         >
           <EditPostModalContent
-            initialText={editingImage.post_text || ''}
-            initialIsNsfw={editingImage.is_nsfw || false}
+            initialText={editingImage.postText || ''}
+            initialIsNsfw={editingImage.isNsfw || false}
             onSave={handleEditSave}
             onCancel={handleEditClose}
           />
@@ -109,7 +109,7 @@ const ImageQueue = ({
       <div className="space-y-4">
         {sortedImages.map((image, index) => (
           <div
-            key={image.storage_key}
+            key={image.storageKey}
             draggable={true}
             onDragStart={(e) => handleDragStart(e, index)}
             onDragOver={(e) => handleDragOver(e, index)}

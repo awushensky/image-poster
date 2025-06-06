@@ -85,13 +85,13 @@ class ImageScheduler {
       let checkTime = new Date(lastCheck);
       
       // Also consider the last_executed time to prevent double-posting
-      const lastExecuted = schedule.last_executed ? new Date(schedule.last_executed) : null;
+      const lastExecuted = schedule.lastExecuted ? new Date(schedule.lastExecuted) : null;
       if (lastExecuted && lastExecuted > checkTime) {
         checkTime = lastExecuted;
       }
 
       // Look for the next occurrence after checkTime
-      const nextOccurrence = getNextExecution(schedule.cron_expression, schedule.timezone, checkTime);
+      const nextOccurrence = getNextExecution(schedule.cronExpression, schedule.timezone, checkTime);
       
       // If the next occurrence is before currentCheck, it should have triggered
       return nextOccurrence <= currentCheck && nextOccurrence > checkTime;
@@ -102,7 +102,7 @@ class ImageScheduler {
   }
 
   private async processScheduleTrigger(schedule: PostingSchedule & { timezone: string }) {
-    const userDid = schedule.user_did;
+    const userDid = schedule.userDid;
     
     try {
       // Single database call that gets next image and updates schedule's last check time
@@ -116,12 +116,12 @@ class ImageScheduler {
       await postImageToBluesky(
         userDid,
         imageBuffer,
-        nextImage.post_text,
-        nextImage.is_nsfw
+        nextImage.postText,
+        nextImage.isNsfw
       );
 
       // Single database transaction: move to posted, reorder queue
-      await moveImageToPosted(userDid, nextImage.storage_key);
+      await moveImageToPosted(userDid, nextImage.storageKey);
     } catch (error) {
       // Even if posting fails, update last_executed to prevent retry loops
       await updateScheduleLastExecuted(schedule.id);
@@ -129,10 +129,10 @@ class ImageScheduler {
   }
 
   private async readImageFromStorage(image: QueuedImage): Promise<Buffer> {
-    const imageFile = await fileStorage.get(image.storage_key);
+    const imageFile = await fileStorage.get(image.storageKey);
     if (!imageFile) {
-      deleteFromImageQueue(image.user_did, image.storage_key);
-      throw new Error(`Image not found in storage: ${image.storage_key}`);
+      deleteFromImageQueue(image.userDid, image.storageKey);
+      throw new Error(`Image not found in storage: ${image.storageKey}`);
     }
 
     return Buffer.from(await imageFile.arrayBuffer());

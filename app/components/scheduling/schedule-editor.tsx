@@ -67,14 +67,14 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
     const cronExpression = timeToCron(selectedTime.hour, selectedTime.minute, selectedDays);
 
     onAddSchedule({
-      cron_expression: cronExpression,
+      cronExpression: cronExpression,
       color: getNextColor(),
       active: true
     });
   };
 
   const activeSchedules = schedules.filter(s => s.active);
-  const nextExecutions = getNextExecutionsForMultipleSchedules(activeSchedules.map(s => s.cron_expression), timezone, 3);
+  const nextExecutions = getNextExecutionsForMultipleSchedules(activeSchedules.map(s => s.cronExpression), timezone, 3);
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
@@ -165,10 +165,10 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
               <div className="flex items-center justify-between">
                 <div>
                   <span className={`font-medium ${getLargeTextColor(schedule.color, schedule.active)}`}>
-                    {cronToDescription(schedule.cron_expression)}
+                    {cronToDescription(schedule.cronExpression)}
                   </span>
                   <p className={`text-sm mt-1 ${getSmallTextColor(schedule.color, schedule.active)}`}>
-                    {cronToDays(schedule.cron_expression).map(day => DAY_NAMES[day]).join(', ')}
+                    {cronToDays(schedule.cronExpression).map(day => DAY_NAMES[day]).join(', ')}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

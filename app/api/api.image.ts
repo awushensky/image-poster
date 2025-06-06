@@ -29,7 +29,7 @@ function fileNameToPostText(fileName: string): string {
  */
 async function loadImage(images: QueuedImage[], storageKey: string): Promise<File> {
   // ensure the user owns this image
-  if (images.filter(image => image.storage_key === storageKey).length === 0) {
+  if (images.filter(image => image.storageKey === storageKey).length === 0) {
     throw new Response("Image not found", {
       status: 404,
     });
@@ -151,11 +151,11 @@ async function updateImage(user: User, storageKey: string, update: FormData): Pr
         };
 
       case 'update':
-        const postText = update.get("post_text")?.toString();
-        const isNsfwStr = update.get("is_nsfw")?.toString()?.toLowerCase();
+        const postText = update.get("postText")?.toString();
+        const isNsfwStr = update.get("isNsfw")?.toString()?.toLowerCase();
         const isNsfw = isNsfwStr === undefined ? undefined : isNsfwStr === "true";
 
-        await updateImageQueueEntry(user.did, storageKey, { post_text: postText, is_nsfw: isNsfw });
+        await updateImageQueueEntry(user.did, storageKey, { postText, isNsfw });
         return {
           status: 200,
           success: true,

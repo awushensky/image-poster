@@ -19,8 +19,8 @@ const ImageCard: React.FC<ImageCardProps> = ({
       <div className="flex items-center gap-4">
         <div className="flex-shrink-0">
           <img
-            src={`/api/image/${image.storage_key}`}
-            alt={image.storage_key || 'Uploaded image'}
+            src={`/api/image/${image.storageKey}`}
+            alt={image.storageKey || 'Uploaded image'}
             className="w-20 h-20 object-cover rounded-lg border border-gray-300"
           />
         </div>
@@ -32,12 +32,12 @@ const ImageCard: React.FC<ImageCardProps> = ({
             </label>
             <div className="relative">
               <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 min-h-[2.5rem] text-sm text-gray-700">
-                {image.post_text || (
+                {image.postText || (
                   <span className="text-gray-400 italic">No post text set</span>
                 )}
               </div>
               <button
-                onClick={() => onEdit(image.storage_key)}
+                onClick={() => onEdit(image.storageKey)}
                 className="absolute top-2 right-2 p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
                 title="Edit post text"
               >
@@ -54,7 +54,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
               </span>
             </div>
 
-            {!image.is_nsfw && (
+            {!image.isNsfw && (
               <div className="flex items-center text-sm text-amber-600">
                 <AlertTriangle className="w-4 h-4 mr-1" />
                 <span>Not flagged NSFW</span>
@@ -65,7 +65,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
 
         <div className="flex-shrink-0">
           <button
-            onClick={(e) => onDelete(image.storage_key, e)}
+            onClick={(e) => onDelete(image.storageKey, e)}
             className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             title="Delete image"
             type="button"

@@ -70,7 +70,7 @@ const ScheduleChart: React.FC<ScheduleChartProps> = ({ schedules, timezone }) =>
   const postingTimes: PostingTime[] = schedules
     .filter(schedule => schedule.active)
     .flatMap(schedule => {
-      const postingTime = cronToTime(schedule.cron_expression);
+      const postingTime = cronToTime(schedule.cronExpression);
       return postingTime.map(instance => ({
         schedule,
         ...instance
@@ -184,7 +184,7 @@ const ScheduleChart: React.FC<ScheduleChartProps> = ({ schedules, timezone }) =>
                           {group.schedules.map((schedule, idx) => (
                             <div key={idx} className="flex items-center gap-1">
                               <div className={`w-2 h-2 ${getColorClass(schedule.color).split(' ')[0]} rounded-full`}></div>
-                              <span>{cronToDescription(schedule.cron_expression)}</span>
+                              <span>{cronToDescription(schedule.cronExpression)}</span>
                             </div>
                           ))}
                         </div>
