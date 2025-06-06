@@ -44,3 +44,35 @@ export function formatTime(hour: number, minute: number): string {
   const displayMinute = minute.toString().padStart(2, '0');
   return `${displayHour}:${displayMinute}`;
 };
+
+export function formatFutureTime(futureDate?: Date, currentDate: Date = new Date()) {
+  if (!futureDate) return 'Not scheduled';
+  const diffMs = futureDate.getTime() - currentDate.getTime();
+  
+  // Handle past dates or very close dates
+  if (diffMs <= 0) {
+    return 'now';
+  }
+  
+  // Convert to different time units
+  const seconds = Math.floor(diffMs / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  // Return appropriate human-readable format
+  if (seconds < 60) {
+    return `in ${seconds} second${seconds === 1 ? '' : 's'}`;
+  } else if (minutes < 60) {
+    return `in ${minutes} minute${minutes === 1 ? '' : 's'}`;
+  } else if (hours < 24) {
+    return `in ${hours} hour${hours === 1 ? '' : 's'}`;
+  } else if (days === 1) {
+    return 'tomorrow';
+  } else if (days < 7) {
+    return `in ${days} day${days === 1 ? '' : 's'}`;
+  } else {
+    const weeks = Math.floor(days / 7);
+    return `in ${weeks} week${weeks === 1 ? '' : 's'}`;
+  }
+}

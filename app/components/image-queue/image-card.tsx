@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calendar, AlertTriangle, Trash2, Edit3 } from 'lucide-react';
 import type { ImageWithEstimatedUpload } from '~/lib/posting-time-estimator';
+import { formatFutureTime } from '~/lib/time-utils';
 
 interface ImageCardProps {
   image: ImageWithEstimatedUpload;
@@ -13,20 +14,6 @@ const ImageCard: React.FC<ImageCardProps> = ({
   onDelete,
   onEdit
 }) => {
-  const formatEstimatedTime = (timestamp?: Date) => {
-    if (!timestamp) return 'Not scheduled';
-    
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffInHours = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return 'Posting soon';
-    if (diffInHours < 24) return `In ${diffInHours} hours`;
-    
-    const diffInDays = Math.ceil(diffInHours / 24);
-    return `In ${diffInDays} days`;
-  };
-
   return (
     <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200 hover:shadow-lg transition-shadow duration-200">
       <div className="flex items-center gap-4">
@@ -63,7 +50,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
             <div className="flex items-center text-sm text-gray-600">
               <Calendar className="w-4 h-4 mr-1" />
               <span title={image.estimatedPostTime ? image.estimatedPostTime.toLocaleString() : ''}>
-                {formatEstimatedTime(image.estimatedPostTime)}
+                {formatFutureTime(image.estimatedPostTime)}
               </span>
             </div>
 
