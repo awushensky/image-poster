@@ -66,9 +66,11 @@ class ImageScheduler {
       this.shouldTriggerSchedule(schedule, this.lastGlobalCheck, checkStartTime)
     );
     
+    console.log(`Image poster is about to post ${untriggeredSchedules.length} images...`);
     for (const schedule of untriggeredSchedules) {
       await this.processScheduleTrigger(schedule);
     }
+    console.log("Done posting images!");
     
     this.lastGlobalCheck = checkStartTime;
   }

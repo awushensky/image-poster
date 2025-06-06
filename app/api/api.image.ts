@@ -1,11 +1,12 @@
 import { fileStorage } from "~/service/image-storage.server";
 import type { Route } from "./+types/api.image";
 import { requireUser } from "~/auth/session.server";
-import { createImageQueueEntry, deleteFromImageQueue, getImageQueueForUser, readImageQueueEntry, reorderImageInQueue, updateImageQueueEntry } from "~/db/image-queue-database.server";
-import type { QueuedImage, User } from "~/model/model";
+import { createImageQueueEntry, deleteFromImageQueue, readImageQueueEntry, reorderImageInQueue, updateImageQueueEntry } from "~/db/image-queue-database.server";
+import type { User } from "~/model/model";
 import { FileUpload, parseFormData, type FileUploadHandler } from "@mjackson/form-data-parser";
 import { createHash } from "crypto";
 import type { ApiResult } from "./api";
+import { readPostedImageEntry } from "~/db/posted-image-database.server";
 
 
 interface UploadResult extends ApiResult {
@@ -27,9 +28,11 @@ function fileNameToPostText(fileName: string): string {
  * @param storageKey the image storage key to load
  * @returns 
  */
-async function loadImage(images: QueuedImage[], storageKey: string): Promise<File> {
+async function loadImage(user: User, storageKey: string): Promise<File> {
   // ensure the user owns this image
-  if (images.filter(image => image.storageKey === storageKey).length === 0) {
+  const queuedImage = await readImageQueueEntry(user.did, storageKey);
+  const postedImage = await readPostedImageEntry(user.did, storageKey);
+  if (!queuedImage && !postedImage) {
     throw new Response("Image not found", {
       status: 404,
     });
@@ -219,14 +222,13 @@ async function deleteImage(user: User, storageKey: string): Promise<DeleteResult
 
 export async function loader({ request, params }: Route.LoaderArgs) {
   const user = await requireUser(request);
-  const images = await getImageQueueForUser(user.did)
   const { storageKey } = params;
 
   if (!storageKey) {
     throw new Response("Storage key is required", { status: 400 });
   }
 
-  const imageFile = await loadImage(images, storageKey);
+  const imageFile = await loadImage(user, storageKey);
 
   return new Response(imageFile.stream(), {
     headers: {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '~/components/modal';
 import ScheduleModalContent from './schedule-modal-content';
-import type { PostingSchedule, ProposedPostingSchedule, User } from '~/model/model';
+import { parsePostingSchedule, type PostingSchedule, type ProposedPostingSchedule, type User } from '~/model/model';
 
 interface ScheduleModalProps {
   isOpen: boolean;
@@ -43,7 +43,8 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({
         throw new Error(data.error || 'Failed to load schedules');
       }
 
-      setSchedules(data.schedules || []);
+      const schedules = (data.schedules || []).map(parsePostingSchedule)
+      setSchedules(schedules);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load schedule data';
       setLoadError(errorMessage);

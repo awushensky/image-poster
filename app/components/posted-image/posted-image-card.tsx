@@ -1,38 +1,13 @@
 import React from 'react';
 import { Calendar, AlertTriangle, CheckCircle } from 'lucide-react';
 import type { PostedImage } from '~/model/model';
+import { formatRelativeTime } from '~/lib/time-utils';
 
 interface PostedImageCardProps {
   image: PostedImage;
 }
 
 const PostedImageCard: React.FC<PostedImageCardProps> = ({ image }) => {
-  const formatPostedTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    
-    // If it's today, show time
-    if (date.toDateString() === now.toDateString()) {
-      return `Today at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    }
-    
-    // If it's yesterday
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (date.toDateString() === yesterday.toDateString()) {
-      return `Yesterday at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    }
-    
-    // Otherwise show full date and time
-    return date.toLocaleDateString([], { 
-      month: 'short', 
-      day: 'numeric', 
-      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
   return (
     <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
       <div className="flex items-center gap-4">
@@ -59,20 +34,20 @@ const PostedImageCard: React.FC<PostedImageCardProps> = ({ image }) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center text-sm text-gray-600">
               <Calendar className="w-4 h-4 mr-1" />
-              <span title={new Date(image.createdAt).toLocaleString()}>
-                Posted {formatPostedTime(image.createdAt)}
+              <span title={image.createdAt.toLocaleString()}>
+                Posted {formatRelativeTime(image.createdAt)}
               </span>
             </div>
 
             <div className="flex items-center gap-3">
               {image.isNsfw ? (
-                <div className="flex items-center text-sm text-amber-600">
-                  <AlertTriangle className="w-4 h-4 mr-1" />
+                <div className="flex items-center text-sm text-gray-500">
                   <span>NSFW</span>
                 </div>
               ) : (
-                <div className="flex items-center text-sm text-gray-500">
-                  <span>Safe</span>
+                <div className="flex items-center text-sm text-amber-600">
+                  <AlertTriangle className="w-4 h-4 mr-1" />
+                  <span>Not Marked NSFW</span>
                 </div>
               )}
               

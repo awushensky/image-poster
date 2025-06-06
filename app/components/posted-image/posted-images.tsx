@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { PostedImage } from '~/model/model';
+import { parsePostedImage, type PostedImage } from '~/model/model';
 import PostedImageCard from './posted-image-card';
 
 interface PostedImagesProps {
@@ -9,12 +9,12 @@ interface PostedImagesProps {
 }
 
 const PostedImages: React.FC<PostedImagesProps> = ({ isVisible, onChanged, onError }) => {
-  const [images, setImages] = useState<PostedImage[]>([]);
+  const [images, setImages] = useState<PostedImage[] | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
 
   // Fetch posted images when component becomes visible
   useEffect(() => {
-    if (isVisible && images === null) {
+    if (isVisible && images === undefined) {
       fetchPostedImages();
     }
   }, [isVisible, images]);
@@ -28,12 +28,13 @@ const PostedImages: React.FC<PostedImagesProps> = ({ isVisible, onChanged, onErr
         throw new Error('Failed to fetch posted images');
       }
 
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to load posted images');
+      const result = await response.json();
+      console.log(`Got result ${JSON.stringify(result)}`);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load posted images');
       }
 
-      const images = data.images || [];
+      const images = (result.images || []).map(parsePostedImage);
       setImages(images);
       onChanged(images.length)
     } catch (error) {
@@ -48,7 +49,7 @@ const PostedImages: React.FC<PostedImagesProps> = ({ isVisible, onChanged, onErr
     return null;
   }
 
-  if (isLoading) {
+  if (isLoading || images === undefined) {
     return (
       <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
         <div className="flex items-center justify-center py-12">

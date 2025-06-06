@@ -6,8 +6,8 @@ export interface User {
   timezone: string;
   displayName?: string;
   avatarUrl?: string;
-  createdAt: string;
-  lastLogin: string;
+  createdAt: Date;
+  lastLogin: Date;
 }
 
 export interface PostingSchedule {
@@ -29,7 +29,7 @@ export interface QueuedImage {
   postText: string;
   isNsfw: boolean;
   queueOrder: number;
-  createdAt: string;
+  createdAt: Date;
 }
 
 export interface ProposedQueuedImage extends Omit<QueuedImage, 'storageKey' | 'userDid' | 'queueOrder' | 'createdAt'> {};
@@ -39,5 +39,36 @@ export interface PostedImage {
   userDid: string;
   postText: string;
   isNsfw: boolean;
-  createdAt: string;
+  createdAt: Date;
+}
+
+export function parseUser(raw: any): User {
+  return {
+    ...raw,
+    createdAt: new Date(raw.createdAt),
+    lastLogin: new Date(raw.lastLogin),
+  }
+}
+
+export function parsePostingSchedule(raw: any): PostingSchedule {
+  return {
+    ...raw,
+    lastExecuted: raw.lastExecuted ? new Date(raw.lastExecuted) : undefined,
+    createdAt: new Date(raw.createdAt),
+    updatedAt: new Date(raw.updatedAt),
+  }
+}
+
+export function parseQueuedImage(raw: any): QueuedImage {
+  return {
+    ...raw,
+    createdAt: new Date(raw.createdAt),
+  }
+}
+
+export function parsePostedImage(raw: any): PostedImage {
+  return {
+    ...raw,
+    createdAt: new Date(raw.createdAt),
+  };
 }

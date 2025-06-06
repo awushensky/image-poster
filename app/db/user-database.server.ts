@@ -19,8 +19,8 @@ function transformUserRow(row: UserRow): User {
     timezone: row.timezone,
     displayName: row.display_name,
     avatarUrl: row.avatar_url,
-    createdAt: row.created_at,
-    lastLogin: row.last_login,
+    createdAt: new Date(row.created_at),
+    lastLogin: new Date(row.last_login),
   };
 }
 

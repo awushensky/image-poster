@@ -6,7 +6,7 @@ import { deleteImage, reorderImages, updateImage } from '~/lib/dashboard-utils';
 import ImageCard from './image-card';
 import Modal from '../modal';
 import EditPostModalContent from './edit-post-modal-content';
-import type { ProposedQueuedImage, PostingSchedule } from '~/model/model';
+import { type ProposedQueuedImage, type PostingSchedule, parseQueuedImage } from '~/model/model';
 
 interface ImageQueueProps {
   schedules: PostingSchedule[];
@@ -42,14 +42,15 @@ const ImageQueue = ({
 
       const result = await response.json();
       if (!result.success) {
-        throw new Error(result.error || 'Failed to load posted images');
+        throw new Error(result.error || 'Failed to load queued images');
       }
       
-      const estimatedImages = estimateImageSchedule(result.images, schedules, userTimezone);
+      const queuedImages = result.images.map(parseQueuedImage);
+      const estimatedImages = estimateImageSchedule(queuedImages, schedules, userTimezone);
       setImages(estimatedImages);
       onChanged(estimatedImages.length);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load posted images';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load queued images';
       onError(errorMessage);
     } finally {
       setLoading(false);

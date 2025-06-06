@@ -16,8 +16,21 @@ function transformPostedImageRow(row: PostedImageRow): PostedImage {
     userDid: row.user_did,
     postText: row.post_text,
     isNsfw: Boolean(row.is_nsfw),
-    createdAt: row.created_at
+    createdAt: new Date(row.created_at),
   };
+}
+
+export async function readPostedImageEntry(
+  userDid: string,
+  storageKey: string,
+): Promise<PostedImage | undefined> {
+  return await useDatabase(async db => {
+    const row: PostedImageRow | undefined = await db.get(
+      'SELECT * FROM posted_images WHERE user_did = ? AND storage_key = ?',
+      [userDid, storageKey]);
+
+    return row ? transformPostedImageRow(row) : undefined;
+  });
 }
 
 export async function readPostedImageEntries(

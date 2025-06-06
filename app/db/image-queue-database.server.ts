@@ -26,7 +26,7 @@ function transformQueuedImageRow(row: QueuedImageRow): QueuedImage {
     postText: row.post_text,
     isNsfw: Boolean(row.is_nsfw),
     queueOrder: row.queue_order,
-    createdAt: row.created_at
+    createdAt: new Date(row.created_at),
   };
 }
 
@@ -50,18 +50,14 @@ export async function createImageQueueEntry(
   });
 }
 
-export async function readImageQueueEntry(userDid: string, storageKey: string): Promise<QueuedImage> {
+export async function readImageQueueEntry(userDid: string, storageKey: string): Promise<QueuedImage | undefined> {
   return await useDatabase(async db => {
     const row: QueuedImageRow | undefined = await db.get(
       'SELECT * FROM queued_images WHERE user_did = ? AND storage_key = ?',
       [userDid, storageKey]
     );
-
-    if (!row) {
-      throw new Error('Image not found in queue');
-    }
     
-    return transformQueuedImageRow(row);
+    return maybeTransformQueuedImageRow(row);
   });
 }
 
