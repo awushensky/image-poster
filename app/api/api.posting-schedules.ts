@@ -1,12 +1,33 @@
 import { requireUser } from "~/auth/session.server";
 import type { Route } from "./+types/api.posting-schedules";
-import { updatePostingSchedules } from "~/db/posting-schedule-database.server";
+import { updatePostingSchedules, getUserPostingSchedules } from "~/db/posting-schedule-database.server";
 import type { PostingSchedule, ProposedPostingSchedule, User } from "~/model/model";
 import type { ApiResult } from "./api";
 
-
 interface PostingScheduleUpdateResult extends ApiResult {
   schedules?: PostingSchedule[];
+}
+
+interface PostingScheduleGetResult extends ApiResult {
+  schedules?: PostingSchedule[];
+}
+
+async function getSchedules(user: User): Promise<PostingScheduleGetResult> {
+  try {
+    const schedules = await getUserPostingSchedules(user.did);
+
+    return {
+      status: 200,
+      success: true,
+      schedules: schedules,
+    };
+  } catch (error) {
+    return {
+      status: 500,
+      success: false,
+      error: "Failed to retrieve schedules",
+    };
+  }
 }
 
 async function updateSchedules(user: User, request: Request): Promise<PostingScheduleUpdateResult> {
@@ -28,7 +49,7 @@ async function updateSchedules(user: User, request: Request): Promise<PostingSch
       status: 200,
       success: true,
       schedules: updatedSchedules,
-      message: "Image uploaded successfully"
+      message: "Schedules updated successfully"
     };
   } catch (error) {
     return {
@@ -37,6 +58,12 @@ async function updateSchedules(user: User, request: Request): Promise<PostingSch
       error: "Error parsing schedules"
     };
   }
+}
+
+export async function loader({ request }: Route.LoaderArgs) {
+  const user = await requireUser(request);
+  const result = await getSchedules(user);
+  return Response.json(result, { status: result.status });
 }
 
 export async function action({ request }: Route.ActionArgs) {

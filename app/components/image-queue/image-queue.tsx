@@ -12,12 +12,14 @@ interface ImageQueueProps {
   schedules: PostingSchedule[];
   userTimezone: string;
   onChanged: (imageCount: number) => void;
+  onError: (error: string) => void;
 }
 
 const ImageQueue = ({
   schedules,
   userTimezone,
-  onChanged
+  onChanged,
+  onError,
 }: ImageQueueProps) => {
   const [images, setImages] = useState<ImageWithEstimatedUpload[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +41,6 @@ const ImageQueue = ({
       if (result.success) {
         const estimatedImages = estimateImageSchedule(result.images, schedules, userTimezone);
         setImages(estimatedImages);
-        console.log(`Estimated images ${JSON.stringify(estimatedImages)}`);
         onChanged(estimatedImages.length);
       } else {
         console.error('Failed to load images:', result.error);
@@ -55,7 +56,6 @@ const ImageQueue = ({
     }
   };
 
-  console.log(`images: ${JSON.stringify(images)}`);
   const sortedImages = [...images].sort((a, b) => a.queueOrder - b.queueOrder);
   const editingImage = editingImageKey ? images.find(img => img.storageKey === editingImageKey) : null;
 
@@ -99,8 +99,7 @@ const ImageQueue = ({
 
       const result = await response.json();
       if (!result.success) {
-        console.error('Failed to reorder image:', result.error);
-        // Could show an error toast here
+        onError(result.error);
       }
 
       onChanged(images.length);
@@ -144,8 +143,7 @@ const ImageQueue = ({
 
       const result = await response.json();
       if (!result.success) {
-        console.error('Failed to update image:', result.error);
-        // Could show an error toast here
+        onError(result.error);
       }
 
       setEditingImageKey(null);
@@ -170,8 +168,7 @@ const ImageQueue = ({
 
       const result = await response.json();
       if (!result.success) {
-        console.error('Failed to delete image:', result.error);
-        // Could show an error toast here
+        onError(result.error);
       }
 
       onChanged(updatedImages.length);
@@ -179,8 +176,6 @@ const ImageQueue = ({
       console.error('Failed to delete image:', error);
     }
   };
-
-  console.log(`sorted images ${JSON.stringify(sortedImages)}`);
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen relative">

@@ -6,7 +6,7 @@ import type { ApiResult } from "./api";
 
 
 interface UpdateUserResult extends ApiResult {
-  user?: User
+  user?: User;
 }
 
 async function updateUser(user: User, request: Request): Promise<UpdateUserResult> {
@@ -26,14 +26,14 @@ async function updateUser(user: User, request: Request): Promise<UpdateUserResul
       status: 200,
       success: true,
       user: updatedUser,
-      message: "Image uploaded successfully"
+      message: "User updated successfully"
     };
   } catch (error) {
     return {
       status: 400,
       success: false,
       error: "Failed to update user"
-    }
+    };
   }
 }
 

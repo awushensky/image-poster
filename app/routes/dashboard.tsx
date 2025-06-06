@@ -7,12 +7,10 @@ import PostedImages from "~/components/posted-image/posted-images";
 import Tabs from "~/components/tabs";
 import Header from "~/components/header";
 import { useEffect, useState } from "react";
-import Modal from "~/components/modal";
 import { useRevalidator } from "react-router";
-import type { ProposedPostingSchedule } from "~/model/model";
 import { getUserPostingSchedules } from "~/db/posting-schedule-database.server";
-import ScheduleModalContent from "~/components/scheduling/schedule-modal-content";
 import UploadModal from "~/components/image-upload/upload-modal";
+import ScheduleModal from "~/components/scheduling/schedule-modal";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
@@ -32,6 +30,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('queue');
   const [queueCount, setQueueCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Reset modals whenever loader data changes
@@ -47,54 +46,13 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
     setScheduleModalOpen(false);
   };
 
-  const handleScheduleModalSave = async (updatedSchedules: ProposedPostingSchedule[], timezone: string) => {
-    const tasks = [];
+  const handleScheduleModalSaved = () => {
+    revalidator.revalidate();
+  };
 
-    if (JSON.stringify(updatedSchedules) !== JSON.stringify(schedules)) {
-      tasks.push(
-        fetch('/api/posting-schedules', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ schedules: updatedSchedules })
-        }).then(async (response) => {
-          const result = await response.json();
-          if (!result.success) {
-            throw new Error(result.error || 'Failed to update schedules');
-          }
-          return result;
-        })
-      );
-    }
-
-    if (timezone !== user.timezone) {
-      tasks.push(
-        fetch('/api/user', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ timezone })
-        }).then(async (response) => {
-          const result = await response.json();
-          if (!result.success) {
-            throw new Error(result.error || 'Failed to update timezone');
-          }
-          return result;
-        })
-      );
-    }
-
-    try {
-      await Promise.all(tasks);
-      setScheduleModalOpen(false);
-      revalidator.revalidate();
-    } catch (error) {
-      console.error('Failed to save schedule changes:', error);
-      // Could show an error toast here
-    }
-  }
+  const handleScheduleModalError = (errorMessage: string) => {
+    setError(errorMessage);
+  };
 
   const handleImagesUploaded = async () => {
     setUploadModalOpen(false);
@@ -106,9 +64,12 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
   };
 
   const handleImageQueueChanged = (imageCount: number) => {
-    // Update the tab count immediately for responsive UI
     setQueueCount(imageCount);
   };
+
+  const handleImageQueueError = (errorMessage: string) => {
+    setError(errorMessage);
+  }
 
   const handleLogout = () => {
     window.location.href = '/auth/logout';
@@ -116,18 +77,13 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
   
   return (
     <div className="min-h-screen bg-gray-50">
-      {scheduleModalOpen && (
-        <Modal
-          onClose={handleScheduleModalClose}
-          title="Schedule">
-            <ScheduleModalContent
-              initialTimezone={user.timezone}
-              initialSchedules={schedules}
-              onSaved={handleScheduleModalSave}
-              onCancel={handleScheduleModalClose}
-            />
-        </Modal>
-      )}
+      <ScheduleModal
+        isOpen={scheduleModalOpen}
+        user={user}
+        onClose={handleScheduleModalClose}
+        onSaved={handleScheduleModalSaved}
+        onError={handleScheduleModalError}
+      />
 
       {uploadModalOpen && (
         <UploadModal
@@ -182,6 +138,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
               schedules={schedules}
               userTimezone={user.timezone}
               onChanged={handleImageQueueChanged}
+              onError={handleImageQueueError}
             />
           )}
 
