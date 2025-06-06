@@ -1,7 +1,6 @@
 import ScheduleSummary from "~/components/scheduling/schedule-summary";
 import type { Route } from "./+types/dashboard";
 import { requireUser } from "~/auth/session.server";
-import { readPostedImageEntries } from "~/db/posted-image-database.server";
 import ImageQueue from "~/components/image-queue/image-queue";
 import PostedImages from "~/components/posted-image/posted-images";
 import Tabs from "~/components/tabs";
@@ -15,21 +14,21 @@ import ScheduleModal from "~/components/scheduling/schedule-modal";
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
   const schedules = await getUserPostingSchedules(user.did);
-  const postedImages = await readPostedImageEntries(user.did);
   
-  return { user, schedules, postedImages };
+  return { user, schedules };
 }
 
 type TabType = 'queue' | 'posted';
 
 export default function Dashboard({ loaderData }: Route.ComponentProps) {
-  const { user, schedules, postedImages } = loaderData
+  const { user, schedules } = loaderData
 
   const revalidator = useRevalidator();
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('queue');
   const [queueCount, setQueueCount] = useState(0);
+  const [postedCount, setPostedCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -68,6 +67,14 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
   };
 
   const handleImageQueueError = (errorMessage: string) => {
+    setError(errorMessage);
+  }
+
+  const handlePostedImagesChanged = (imageCount: number) => {
+    setPostedCount(imageCount);
+  }
+
+  const handlePostedImagesError = (errorMessage: string) => {
     setError(errorMessage);
   }
 
@@ -125,7 +132,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
             <Tabs
               tabs={[
                 { id: 'queue', label: 'Queue', count: queueCount },
-                { id: 'posted', label: 'Posted', count: postedImages.length }
+                { id: 'posted', label: 'Posted', count: postedCount }
               ]}
               activeTab={activeTab}
               onTabChange={(tabId) => setActiveTab(tabId as TabType) }
@@ -144,7 +151,9 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
 
           {activeTab === 'posted' && (
             <PostedImages
-              images={postedImages}
+              isVisible={true}
+              onChanged={handlePostedImagesChanged}
+              onError={handlePostedImagesError}
             />
           )}
         </div>

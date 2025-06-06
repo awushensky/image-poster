@@ -36,21 +36,21 @@ const ImageQueue = ({
     try {
       setLoading(true);
       const response = await fetch(`/api/image-queue`);
-      const result = await response.json();
-      
-      if (result.success) {
-        const estimatedImages = estimateImageSchedule(result.images, schedules, userTimezone);
-        setImages(estimatedImages);
-        onChanged(estimatedImages.length);
-      } else {
-        console.error('Failed to load images:', result.error);
-        setImages([]);
-        onChanged(0);
+      if (!response.ok) {
+        throw new Error('Failed to fetch queued images');
       }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load posted images');
+      }
+      
+      const estimatedImages = estimateImageSchedule(result.images, schedules, userTimezone);
+      setImages(estimatedImages);
+      onChanged(estimatedImages.length);
     } catch (error) {
-      console.error('Failed to load images:', error);
-      setImages([]);
-      onChanged(0);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load posted images';
+      onError(errorMessage);
     } finally {
       setLoading(false);
     }

@@ -1,12 +1,64 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { PostedImage } from '~/model/model';
 import PostedImageCard from './posted-image-card';
 
 interface PostedImagesProps {
-  images: PostedImage[];
+  isVisible: boolean;
+  onChanged: (imageCount: number) => void;
+  onError: (error: string) => void;
 }
 
-const PostedImages: React.FC<PostedImagesProps> = ({ images = [] }) => {
+const PostedImages: React.FC<PostedImagesProps> = ({ isVisible, onChanged, onError }) => {
+  const [images, setImages] = useState<PostedImage[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch posted images when component becomes visible
+  useEffect(() => {
+    if (isVisible && images === null) {
+      fetchPostedImages();
+    }
+  }, [isVisible, images]);
+
+  const fetchPostedImages = async () => {
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/posted-images');
+      if (!response.ok) {
+        throw new Error('Failed to fetch posted images');
+      }
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to load posted images');
+      }
+
+      const images = data.images || [];
+      setImages(images);
+      onChanged(images.length)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load posted images';
+      onError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!isVisible) {
+    return null;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-3 text-gray-600">Loading posted images...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
       <div className="space-y-4">
