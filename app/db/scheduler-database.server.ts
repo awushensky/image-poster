@@ -6,9 +6,8 @@ import { useDatabase } from "./database.server";
  * This includes: moving image from queue to posted, reordering queue, and updating schedule
  */
 export async function processImagePosting(
-  userDid: string, 
-  storageKey: string, 
-  scheduleId: number
+  userDid: string,
+  storageKey: string,
 ): Promise<void> {
   return await useDatabase(async db => {
     await db.run('BEGIN IMMEDIATE');
@@ -43,14 +42,6 @@ export async function processImagePosting(
         WHERE user_did = ? AND queue_order > ?
       `, [userDid, imageToDelete.queue_order]);
       
-      // Update schedule last executed
-      await db.run(`
-        UPDATE posting_schedules 
-        SET last_executed = CURRENT_TIMESTAMP,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `, [scheduleId]);
-      
       await db.run('COMMIT');
     } catch (error) {
       await db.run('ROLLBACK');
@@ -84,29 +75,21 @@ export async function getNextImageToPostForUserDirect(userDid: string): Promise<
 export async function getNextImageOrUpdateSchedule(
   userDid: string, 
   scheduleId: number
-): Promise<QueuedImage | null> {
+): Promise<QueuedImage | undefined> {
   return await useDatabase(async db => {
-    // Get next image to post
-    const image = await db.get(`
+    await db.run(`
+      UPDATE posting_schedules 
+      SET last_executed = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `, [scheduleId]);
+
+    return await db.get(`
       SELECT qi.*
       FROM queued_images qi
       WHERE qi.user_did = ?
       ORDER BY qi.queue_order ASC
       LIMIT 1
     `, [userDid]) as QueuedImage | undefined;
-    
-    if (!image) {
-      // No images available, update schedule to prevent constant checking
-      await db.run(`
-        UPDATE posting_schedules 
-        SET last_executed = CURRENT_TIMESTAMP,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `, [scheduleId]);
-      
-      return null;
-    }
-    
-    return image;
   });
 }
