@@ -8,15 +8,8 @@ import { createHash } from "crypto";
 import { readPostedImageEntry } from "~/db/posted-image-database.server";
 import { bufferToFile, compressImage, createThumbnail, streamToBuffer } from "~/lib/image-utils";
 import type { ApiResult } from "~/api-interface/api";
+import type { ImageUploadResult } from "~/api-interface/image";
 
-
-interface UploadResult extends ApiResult {
-  storageKey?: string;
-}
-
-interface UpdateResult extends ApiResult {}
-
-interface DeleteResult extends ApiResult {}
 
 function fileNameToPostText(fileName: string): string {
   const fileNameSpaces = fileName.replaceAll('_', ' ');
@@ -60,7 +53,7 @@ async function loadImage(user: User, storageKey: string): Promise<File> {
  * @param user the user uploading the image
  * @param request the request containing the image file
  */
-async function uploadImage(user: User, request: Request): Promise<UploadResult> {
+async function uploadImage(user: User, request: Request): Promise<ImageUploadResult> {
   try {
     let uploadedStorageKey: string | null = null;
 
@@ -115,112 +108,6 @@ async function uploadImage(user: User, request: Request): Promise<UploadResult> 
   }
 }
 
-/**
- * Update an image in the queue. This can be used to reorder the image in the queue or update its metadata.
- * @param user the user performing the update
- * @param storageKey the storage key of the image to update
- * @param update the form data containing the update information
- */
-async function updateImage(user: User, storageKey: string, update: FormData): Promise<UpdateResult> {
-  try {
-    const action = update.get("action")?.toString();
-
-    switch(action) {
-      case 'reorder':
-        const toOrderString = update.get("toOrder")?.toString();
-        if (!toOrderString) {
-          return {
-            status: 400,
-            success: false,
-            error: "toOrder not provided"
-          };
-        }
-        
-        let toOrder: number;
-        try {
-          toOrder = parseInt(toOrderString);
-        } catch (exception) {
-          return {
-            status: 400,
-            success: false,
-            error: "Invalid toOrder provided"
-          };
-        }
-
-        await reorderImageInQueue(user.did, storageKey, toOrder);
-        return {
-          status: 200,
-          success: true,
-          message: "Image reordered successfully"
-        };
-
-      case 'update':
-        const postText = update.get("postText")?.toString();
-        const isNsfwStr = update.get("isNsfw")?.toString()?.toLowerCase();
-        const isNsfw = isNsfwStr === undefined ? undefined : isNsfwStr === "true";
-
-        await updateImageQueueEntry(user.did, storageKey, { postText, isNsfw });
-        return {
-          status: 200,
-          success: true,
-          message: "Image updated successfully"
-        };
-
-      default:
-        return {
-          status: 400,
-          success: false,
-          error: `Invalid image update action ${action}`
-        };
-    }
-  } catch (error) {
-    console.error('Update error:', error);
-    return {
-      status: 500,
-      success: false,
-      error: error instanceof Error ? error.message : "Update failed"
-    };
-  }
-}
-
-/**
- * Delete an image from the queue and remove it from file storage.
- * @param user the user performing the delete
- * @param storageKey the storage key of the image to delete
- */
-async function deleteImage(user: User, storageKey: string): Promise<DeleteResult> {
-  try {
-    const image = await readImageQueueEntry(user.did, storageKey);
-    if (!image) {
-      return {
-        status: 404,
-        success: false,
-        error: "Image not found"
-      };
-    }
-
-    // TODO: if the file storage removal fails, we might have a hanging file with no reference.
-    // Eventually, we should regularly clean up the files with no references in the image-queue
-    // database.
-    await deleteFromImageQueue(user.did, storageKey);
-    await fileStorage.remove(storageKey);
-
-    return {
-      status: 200,
-      success: true,
-      message: "Image deleted successfully"
-    };
-
-  } catch (error) {
-    console.error('Delete error:', error);
-    return {
-      status: 500,
-      success: false,
-      error: error instanceof Error ? error.message : "Delete failed"
-    };
-  }
-}
-
 export async function loader({ request, params }: Route.LoaderArgs) {
   const user = await requireUser(request);
   const { storageKey } = params;
@@ -246,41 +133,13 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   return new Response(imageFile.stream(), { headers });
 }
 
-export async function action({ request, params }: Route.ActionArgs) {
+export async function action({ request }: Route.ActionArgs) {
   try {
     const user = await requireUser(request);
 
     switch (request.method) {
       case 'POST': {
         const result = await uploadImage(user, request);
-        return Response.json(result, { status: result.status });
-      }
-
-      case 'PUT': {
-        if (!params.storageKey) {
-          const result: UpdateResult = {
-            status: 400,
-            success: false,
-            error: "Storage key is required"
-          };
-          return Response.json(result, { status: result.status });
-        }
-
-        const result = await updateImage(user, params.storageKey, await request.formData());
-        return Response.json(result, { status: result.status });
-      }
-
-      case 'DELETE': {
-        if (!params.storageKey) {
-          const result: DeleteResult = {
-            status: 400,
-            success: false,
-            error: "Storage key is required"
-          };
-          return Response.json(result, { status: result.status });
-        }
-
-        const result = await deleteImage(user, params.storageKey);
         return Response.json(result, { status: result.status });
       }
 

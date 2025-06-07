@@ -7,7 +7,7 @@ import ImageCard from './image-card';
 import Modal from '../modal';
 import EditPostModalContent from './edit-post-modal-content';
 import { type ProposedQueuedImage, type PostingSchedule } from '~/model/model';
-import { fetchQueuedImages } from "~/api-interface/image-queue";
+import { deleteQueuedImage, fetchQueuedImages, updateQueuedImage } from "~/api-interface/image-queue";
 import { fetchThumbnails } from "~/api-interface/thumbnail";
 import { type ThumbnailData } from "~/api-interface/thumbnail";
 
@@ -31,12 +31,15 @@ const ImageQueue = ({
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [editingImageKey, setEditingImageKey] = useState<string | null>(null);
 
+  const queueItems = [...images].map(image => ({image: image, thumbnail: thumbnails.find(thumbnail => thumbnail.storageKey === image.storageKey)!}));
+  const editingImage = editingImageKey ? images.find(img => img.storageKey === editingImageKey) : null;
+
   // Load images on mount and when dependencies change
   useEffect(() => {
     loadImages();
   }, [schedules, userTimezone]);
 
-  const loadImages = async () => {
+  async function loadImages() {
     try {
       setLoading(true);
       const queuedImages = await fetchQueuedImages();
@@ -54,106 +57,83 @@ const ImageQueue = ({
     }
   };
 
-  const sortedImages = [...images]
-    .map((image, index) => ({image: image, thumbnail: thumbnails[index]}))
-    .sort((a, b) => a.image.queueOrder - b.image.queueOrder);
-  const editingImage = editingImageKey ? images.find(img => img.storageKey === editingImageKey) : null;
-
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+  function handleDragStart(e: React.DragEvent<HTMLDivElement>, index: number) {
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+  function handleDragOver(e: React.DragEvent<HTMLDivElement>, index: number) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     setDragOverIndex(index);
   };
 
-  const handleDrop = async (e: React.DragEvent<HTMLDivElement>, droppedIndex: number) => {
+  async function handleDrop(e: React.DragEvent<HTMLDivElement>, droppedIndex: number) {
     e.preventDefault();
 
-    if (draggedIndex === null || draggedIndex === droppedIndex || draggedIndex < 0 || draggedIndex >= sortedImages.length) {
+    if (draggedIndex === null || draggedIndex === droppedIndex || draggedIndex < 0 || draggedIndex >= queueItems.length) {
       setDraggedIndex(null);
       setDragOverIndex(null);
       return;
     }
 
-    const draggedImage = sortedImages[draggedIndex];
-    const droppedImage = sortedImages[droppedIndex];
+    const draggedImage = queueItems[draggedIndex];
+    const droppedImage = queueItems[droppedIndex];
 
     try {
       // Update local state immediately for responsive UI
       const reorderedImages = reorderImages(images, draggedImage.image.storageKey, droppedImage.image.queueOrder);
       setImages(estimateImageSchedule(reorderedImages, schedules, userTimezone));
 
-      // Make API call
-      const formData = new FormData();
-      formData.append('action', 'reorder');
-      formData.append('toOrder', droppedImage.image.queueOrder.toString());
-
-      const response = await fetch(`/api/image/${draggedImage.image.storageKey}`, {
-        method: 'PUT',
-        body: formData,
-      });
-
-      const result = await response.json();
-      if (!result.success) {
-        onError(result.error);
-      }
+      // Make API call. Do not await so we have a more reponsive UI
+      updateQueuedImage(
+        draggedImage.image.storageKey,
+        { queueOrder: droppedImage.image.queueOrder },
+      );
 
       onChanged(images.length);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Reorder failure';
+      onError(errorMessage);
     } finally {
       setDraggedIndex(null);
       setDragOverIndex(null);
     }
   };
 
-  const handleDragEnd = () => {
+  function handleDragEnd() {
     setDraggedIndex(null);
     setDragOverIndex(null);
   };
 
-  const handleEditOpen = (storageKey: string) => {
+  function handleEditOpen(storageKey: string) {
     setEditingImageKey(storageKey);
   };
 
-  const handleEditClose = () => {
+  function handleEditClose() {
     setEditingImageKey(null);
   };
 
-  const handleEditSave = async (data: ProposedQueuedImage) => {
+  async function handleEditSave(update: Partial<ProposedQueuedImage>) {
     if (!editingImageKey) return;
 
     try {
       // Update local state immediately for responsive UI
-      const updatedImages = updateImage(images, editingImageKey, data);
+      const updatedImages = updateImage(images, editingImageKey, update);
       setImages(estimateImageSchedule(updatedImages, schedules, userTimezone));
 
-      // Make API call
-      const formData = new FormData();
-      formData.append('action', 'update');
-      formData.append('postText', data.postText);
-      formData.append('isNsfw', data.isNsfw.toString());
-
-      const response = await fetch(`/api/image/${editingImageKey}`, {
-        method: 'PUT',
-        body: formData,
-      });
-
-      const result = await response.json();
-      if (!result.success) {
-        onError(result.error);
-      }
+      // Make API call. Do not await so we have a more reponsive UI
+      updateQueuedImage(editingImageKey, update);
 
       setEditingImageKey(null);
       onChanged(images.length);
     } catch (error) {
-      console.error('Failed to save post data:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Reorder failure';
+      onError(errorMessage);
     }
   };
 
-  const handleDelete = async (storageKey: string, e: React.MouseEvent) => {
+  async function handleDelete(storageKey: string, e: React.MouseEvent) {
     e.stopPropagation();
 
     try {
@@ -161,19 +141,13 @@ const ImageQueue = ({
       const updatedImages = deleteImage(images, storageKey);
       setImages(estimateImageSchedule(updatedImages, schedules, userTimezone));
 
-      // Make API call
-      const response = await fetch(`/api/image/${storageKey}`, {
-        method: 'DELETE',
-      });
-
-      const result = await response.json();
-      if (!result.success) {
-        onError(result.error);
-      }
+      // Make API call. Do not await so we have a more reponsive UI
+      deleteQueuedImage(storageKey);
 
       onChanged(updatedImages.length);
     } catch (error) {
-      console.error('Failed to delete image:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Reorder failure';
+      onError(errorMessage);
     }
   };
 
@@ -199,9 +173,9 @@ const ImageQueue = ({
         </div>
       ) : (
         <div className="space-y-4">
-          {sortedImages.map((image, index) => (
+          {queueItems.map((queueItem, index) => (
             <div
-              key={image.image.storageKey}
+              key={queueItem.image.storageKey}
               draggable={true}
               onDragStart={(e) => handleDragStart(e, index)}
               onDragOver={(e) => handleDragOver(e, index)}
@@ -220,15 +194,12 @@ const ImageQueue = ({
                 <GripVertical className="w-5 h-5 text-gray-400 cursor-grab active:cursor-grabbing" />
               </div>
 
-              {/* Fieldset automatically disables all form elements inside when disabled */}
-              <fieldset disabled={false} className="border-0 p-0 m-0">
-                <ImageCard
-                  image={image.image}
-                  thumbnailBlob={`data:${image.thumbnail.contentType};base64,${image.thumbnail.data}`}
-                  onDelete={handleDelete}
-                  onEdit={handleEditOpen}
-                />
-              </fieldset>
+              <ImageCard
+                image={queueItem.image}
+                thumbnailBlob={`data:${queueItem.thumbnail.contentType};base64,${queueItem.thumbnail.data}`}
+                onDelete={handleDelete}
+                onEdit={handleEditOpen}
+              />
             </div>
           ))}
 

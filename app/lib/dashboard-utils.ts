@@ -6,6 +6,10 @@ export function reorderImages(images: QueuedImage[], imageToReorderStorageKey: s
   return updateQueueOrders(reorderedImages);
 }
 
+export function reorderThumbnails() {
+  
+}
+
 export function updateImage(images: QueuedImage[], imageToUpdateStorageKey: string, update: Partial<ProposedQueuedImage>) {
   const selectedImageIndex = images.findIndex(image => image.storageKey === imageToUpdateStorageKey);
   return images.map((image, index) => {

@@ -1,6 +1,7 @@
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import Modal from "~/components/modal";
 import ImageUploadTarget from "./image-upload-target";
+import { uploadImage } from "~/api-interface/image";
 
 interface UploadProgress {
   file: File;
@@ -28,42 +29,14 @@ export default function UploadModal({ onComplete, onCancel }: UploadModalProps) 
     ));
 
     try {
-      const formData = new FormData();
-      formData.append('image', file);
-      
-      const response = await fetch('/api/image', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        setUploads(prev => prev.map((upload, i) => 
-          i === index 
-            ? { ...upload, status: 'error', error: `Server returned ${contentType || 'unknown'} instead of JSON` }
-            : upload
-        ));
-        return;
-      }
-
-      const result = await response.json();
-
-      if (result.success) {
-        setUploads(prev => prev.map((upload, i) => 
-          i === index 
-            ? { ...upload, progress: 100, status: 'completed' }
-            : upload
-        ));
-      } else {
-        const errorMessage = result.error || 'Upload failed';
-        setUploads(prev => prev.map((upload, i) => 
-          i === index 
-            ? { ...upload, status: 'error', error: errorMessage }
-            : upload
-        ));
-      }
+      uploadImage(file);
+      setUploads(prev => prev.map((upload, i) => 
+        i === index 
+          ? { ...upload, progress: 100, status: 'completed' }
+          : upload
+      ));
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Network error';
+      const errorMessage = error instanceof Error ? error.message : 'Upload failure';
       setUploads(prev => prev.map((upload, i) => 
         i === index 
           ? { ...upload, status: 'error', error: errorMessage }

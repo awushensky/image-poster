@@ -5,7 +5,7 @@ import type { ProposedQueuedImage } from '~/model/model';
 interface EditPostModalContentProps {
   initialText: string;
   initialIsNsfw: boolean;
-  onSave: (update: ProposedQueuedImage) => void;
+  onSave: (update: Partial<ProposedQueuedImage>) => void;
   onCancel: () => void;
 }
 

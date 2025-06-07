@@ -13,13 +13,13 @@ export function parsePostedImage(raw: any): PostedImage {
   };
 }
 
-export async function fetchPostedImages(): Promise<PostedImage> {
+export async function fetchPostedImages(): Promise<PostedImage[]> {
   const response = await fetch('/api/posted-images');
   if (!response.ok) {
     throw new Error('Failed to fetch posted images');
   }
 
-  const result = await response.json();
+  const result = await response.json() as PostedImagesLoadResult;
   if (!result.success) {
     throw new Error(result.error || 'Failed to load posted images');
   }

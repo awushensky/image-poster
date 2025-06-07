@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { type PostedImage } from '~/model/model';
-import { parsePostedImage } from "~/api-interface/posted-images";
+import { fetchPostedImages } from "~/api-interface/posted-images";
 import PostedImageCard from './posted-image-card';
+import { fetchThumbnails, type ThumbnailData } from '~/api-interface/thumbnail';
 
 interface PostedImagesProps {
   isVisible: boolean;
@@ -11,31 +12,23 @@ interface PostedImagesProps {
 
 const PostedImages: React.FC<PostedImagesProps> = ({ isVisible, onChanged, onError }) => {
   const [images, setImages] = useState<PostedImage[] | undefined>(undefined);
+  const [thumbnails, setThumbnails] = useState<ThumbnailData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch posted images when component becomes visible
   useEffect(() => {
     if (isVisible && images === undefined) {
-      fetchPostedImages();
+      loadPostedImages();
     }
   }, [isVisible, images]);
 
-  const fetchPostedImages = async () => {
+  const loadPostedImages = async () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/posted-images');
-      if (!response.ok) {
-        throw new Error('Failed to fetch posted images');
-      }
-
-      const result = await response.json();
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to load posted images');
-      }
-
-      const images = (result.images || []).map(parsePostedImage);
+      const images = await fetchPostedImages();
+      const thumbnails = await fetchThumbnails(images.map(image => image.storageKey));
       setImages(images);
+      setThumbnails(thumbnails);
       onChanged(images.length)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load posted images';
@@ -60,17 +53,20 @@ const PostedImages: React.FC<PostedImagesProps> = ({ isVisible, onChanged, onErr
     );
   }
 
+  const postedItems = [...images].map((image, index) => ({image: image, thumbnail: thumbnails[index]}));
+
   return (
     <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
       <div className="space-y-4">
-        {images.map((image) => (
+        {postedItems.map((postedItem) => (
           <PostedImageCard
-            key={image.storageKey}
-            image={image}
+            key={postedItem.image.storageKey}
+            image={postedItem.image}
+            thumbnailBlob={`data:${postedItem.thumbnail.contentType};base64,${postedItem.thumbnail.data}`}
           />
         ))}
 
-        {images.length === 0 && (
+        {postedItems.length === 0 && (
           <div className="text-center py-12 text-gray-500">
             <div className="text-lg font-medium mb-2">No images posted yet</div>
             <div className="text-sm">Images will appear here once they've been posted to Bluesky</div>

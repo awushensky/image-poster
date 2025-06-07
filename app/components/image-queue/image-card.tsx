@@ -34,7 +34,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
           <div className="flex-shrink-0">
             <img
               src={thumbnailBlob}
-              alt={image.storageKey || 'Uploaded image'}
+              alt={image.storageKey || 'Queued image'}
               onClick={handleImageClick}
               className="w-20 h-20 object-cover rounded-lg border border-gray-300 cursor-pointer hover:opacity-80 transition-opacity"
               loading="lazy"
