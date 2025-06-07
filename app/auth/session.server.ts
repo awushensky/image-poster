@@ -52,7 +52,7 @@ export async function getUser(request: Request): Promise<User | null> {
   // Ensure the user still has a valid session with Bluesky, otherwise log them out.
   const hasValidBskySession = await isSessionValid(user.did);
   if (!hasValidBskySession) {
-    await deleteUserSession(sessionToken);
+    await deleteUserSession(user.did);
     return null;
   }
 
@@ -73,13 +73,11 @@ export async function requireUser(request: Request) {
 
 export async function logout(request: Request) {
   const sessionToken = await getSessionToken(request);
-  
   if (sessionToken) {
     const user = await getUserFromSession(sessionToken);
     if (user) {
       await revokeUserSession(user.did);
     }
-    await deleteUserSession(sessionToken);
   }
   
   const session = await sessionStorage.getSession(request.headers.get('Cookie'));

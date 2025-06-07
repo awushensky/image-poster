@@ -10,6 +10,7 @@ import { useRevalidator } from "react-router";
 import { getUserPostingSchedules } from "~/db/posting-schedule-database.server";
 import UploadModal from "~/components/image-upload/upload-modal";
 import ScheduleModal from "~/components/scheduling/schedule-modal";
+import { Confirmation } from "~/components/confirmation";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
@@ -26,6 +27,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
   const revalidator = useRevalidator();
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('queue');
   const [queueCount, setQueueCount] = useState(0);
   const [postedCount, setPostedCount] = useState(0);
@@ -35,6 +37,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
     // Reset modals whenever loader data changes
     setScheduleModalOpen(false);
     setUploadModalOpen(false);
+    setLogoutConfirmOpen(false);
   }, [loaderData]);
 
   const handleSettingsOpen = () => {
@@ -82,9 +85,17 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
     setError(undefined);
   };
 
-  const handleLogout = () => {
-    window.location.href = '/auth/logout';
+  const handleLogoutAttempt = () => {
+    setLogoutConfirmOpen(true);
   }
+
+  const handleLogoutConfirm = () => {
+    window.location.href = '/auth/logout';
+  };
+
+  const handleLogoutCancel = () => {
+    setLogoutConfirmOpen(false);
+  };
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -103,10 +114,20 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
         />
       )}
 
+      {logoutConfirmOpen && (
+        <Confirmation
+          title="Confirm Logout"
+          message="Are you sure you want to log out?"
+          warning="Logging out will prevent the application from continuing to post images to Bluesky on your behalf. Your scheduled posts will not be published until you log back in."
+          confirmText="Log Out"
+          onCancel={handleLogoutCancel}
+          onConfirm={handleLogoutConfirm}
+        />
+      )}
+
       <Header 
         user={user}
-        onSettingsClick={handleSettingsOpen}
-        onLogoutClick={handleLogout}
+        onLogoutClick={handleLogoutAttempt}
       />
 
       <main className={`max-w-7xl mx-auto p-6`}>

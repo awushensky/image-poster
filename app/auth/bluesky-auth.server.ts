@@ -1,10 +1,11 @@
 import { NodeOAuthClient, type NodeSavedSession, type Session, TokenRefreshError, TokenRevokedError } from '@atproto/oauth-client-node';
 import { JoseKey } from '@atproto/jwk-jose';
-import { Agent } from '@atproto/api';
+import { Agent, AppBskyFeedPost } from '@atproto/api';
 import { createOrUpdateUser } from '~/db/user-database.server';
 import { getUserTimezone } from '../lib/time-utils';
 import { deleteOAuthSession, getOAuthSession, storeOAuthSession } from '~/db/oauth-session-database.server';
 import { getMutex } from '../lib/mutex';
+import { deleteUserSession } from '~/db/user-session-database.server';
 
 
 let oauthClient: NodeOAuthClient;
@@ -103,7 +104,17 @@ function setupOAuthEventListeners(client: NodeOAuthClient) {
     cause: TokenRefreshError | TokenRevokedError | unknown;
   }>) => {
     const { sub, cause } = event.detail;
-    console.log(`OAuth session ${sub} deleted: `, cause);
+    console.log(`OAuth session ${sub} deleted:`, cause);
+    
+    try {
+      await deleteOAuthSession(sub);
+      await deleteUserSession(sub);
+    } catch (error) {
+      console.error(`Failed to clean up deleted session ${sub}:`, error);
+    }
+    
+    // Optionally, mark the user as needing re-authentication in your user database
+    // await markUserForReauth(sub);
   });
 }
 
@@ -176,39 +187,67 @@ export async function postImageToBluesky(
   isNSFW: boolean = true,
   altText: string = '',
 ) {
-  const agent = await restoreUserSession(userDid);
-
-  const uploadResult = await agent.uploadBlob(imageBuffer, {
-    encoding: 'image/jpeg'
-  });
-
-  if (!uploadResult.success) {
-    throw new Error('Failed to upload image to Bluesky');
-  }
-
-  const postData: any = {
-    text: postText,
-    embed: {
-      $type: 'app.bsky.embed.images',
-      images: [{
-        alt: altText,
-        image: uploadResult.data.blob
-      }]
+  try {
+    const isValid = await isSessionValid(userDid);
+    if (!isValid) {
+      throw new Error(`OAuth session invalid for user ${userDid}. User needs to re-authenticate.`);
     }
-  };
 
-  if (isNSFW) {
-    postData.labels = {
-      $type: 'com.atproto.label.defs#selfLabels',
-      values: [{
-        val: 'porn'
-      }]
+    const agent = await restoreUserSession(userDid);
+
+    const uploadResult = await agent.uploadBlob(imageBuffer, {
+      encoding: 'image/jpeg'
+    });
+
+    if (!uploadResult.success) {
+      throw new Error('Failed to upload image to Bluesky');
+    }
+
+    const postData: Partial<AppBskyFeedPost.Record> = {
+      text: postText,
+      embed: {
+        $type: 'app.bsky.embed.images',
+        images: [{
+          alt: altText,
+          image: uploadResult.data.blob
+        }]
+      }
     };
+
+    if (isNSFW) {
+      postData.labels = {
+        $type: 'com.atproto.label.defs#selfLabels',
+        values: [{
+          val: 'porn'
+        }]
+      };
+    }
+
+    return await agent.post(postData);
+  } catch (error) {
+    if (error instanceof TokenRefreshError || error instanceof TokenRevokedError) {
+      console.error(`Session error for ${userDid}:`, error.message);
+      // Clean up the invalid session
+      await deleteOAuthSession(userDid);
+      await deleteUserSession(userDid);
+      throw new Error(`User ${userDid} needs to re-authenticate. Session has been invalidated.`);
+    }
+    throw error;
   }
+}
 
-  const postResult = await agent.post(postData);
-
-  return postResult;
+export async function ensureValidSession(userDid: string): Promise<Agent> {
+  try {
+    return await restoreUserSession(userDid);
+  } catch (error) {
+    if (error instanceof TokenRefreshError || error instanceof TokenRevokedError) {
+      // Clean up invalid session
+      await deleteOAuthSession(userDid);
+      await deleteUserSession(userDid);
+      throw new Error(`User ${userDid} needs to re-authenticate. Session has been invalidated.`);
+    }
+    throw error;
+  }
 }
 
 export async function getOAuthClient() {

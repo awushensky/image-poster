@@ -112,17 +112,18 @@ class ImageScheduler {
       }
       
       const imageBuffer = await this.readImageFromStorage(nextImage);
-      
       await postImageToBluesky(
         userDid,
         imageBuffer,
         nextImage.postText,
-        nextImage.isNsfw
+        nextImage.isNsfw,
       );
 
       // Single database transaction: move to posted, reorder queue
       await moveImageToPosted(userDid, nextImage);
+      console.log(`Successfully posted image ${nextImage.storageKey} for user ${userDid}`);
     } catch (error) {
+      console.error(`Failed to post image!`, error);
       // Even if posting fails, update last_executed to prevent retry loops
       await updateScheduleLastExecuted(schedule.id);
     }

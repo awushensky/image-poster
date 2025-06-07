@@ -48,7 +48,6 @@ export function formatTime(hour: number, minute: number): string {
 export function formatRelativeTime(date?: Date, referenceDate: Date = new Date()) {
   if (!date) return 'Not scheduled';
   
-  console.log(`Date is ${typeof date}`);
   const diffMs = date.getTime() - referenceDate.getTime();
   const absDiffMs = Math.abs(diffMs);
   const isPast = diffMs < 0;

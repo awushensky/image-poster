@@ -1,24 +1,18 @@
 import React, { useState } from 'react';
-import { User as UserIcon, LogOut, Settings } from 'lucide-react';
+import { User as UserIcon, LogOut, Settings, Delete } from 'lucide-react';
 import type { User } from '~/model/model';
 
 interface HeaderProps {
   user: User;
-  onSettingsClick: () => void;
   onLogoutClick: () => void;
 }
 
-export default function Header({ user, onSettingsClick, onLogoutClick }: HeaderProps) {
+export default function Header({ user, onLogoutClick }: HeaderProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const handleLogout = () => {
     setDropdownOpen(false);
     onLogoutClick();
-  };
-
-  const handleSettings = () => {
-    setDropdownOpen(false);
-    onSettingsClick();
   };
 
   return (
@@ -57,14 +51,6 @@ export default function Header({ user, onSettingsClick, onLogoutClick }: HeaderP
                 />
                 
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                  <button
-                    onClick={handleSettings}
-                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                  >
-                    <Settings className="w-4 h-4 mr-3" />
-                    Settings
-                  </button>
-                  
                   <button
                     onClick={handleLogout}
                     className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"

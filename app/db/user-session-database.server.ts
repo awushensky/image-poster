@@ -33,9 +33,9 @@ export async function createUserSession(userDid: string): Promise<string> {
   });
 }
 
-export async function deleteUserSession(sessionToken: string): Promise<void> {
+export async function deleteUserSession(userDid: string): Promise<void> {
   await useDatabase(async db => {
-    await db.run('DELETE FROM user_sessions WHERE session_token = ?', [sessionToken]);
+    await db.run('DELETE FROM user_sessions WHERE user_did = ?', [userDid]);
   });
 }
 
