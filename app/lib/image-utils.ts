@@ -20,6 +20,26 @@ const DEFAULT_OPTIONS: Required<CompressionOptions> = {
 };
 
 /**
+ * Helper function to process sharp instance and return metadata
+ */
+async function processSharpInstance(sharpInstance: sharp.Sharp): Promise<{
+  buffer: Buffer;
+  width: number;
+  height: number;
+  size: number;
+}> {
+  const buffer = await sharpInstance.toBuffer();
+  const metadata = await sharp(buffer).metadata();
+  
+  return {
+    buffer,
+    width: metadata.width || 0,
+    height: metadata.height || 0,
+    size: buffer.length
+  };
+}
+
+/**
  * Convert a FileUpload or stream to buffer
  */
 export async function streamToBuffer(input: FileUpload | Readable): Promise<Buffer> {
@@ -116,26 +136,6 @@ export async function compressImage(
 }
 
 /**
- * Helper function to process sharp instance and return metadata
- */
-async function processSharpInstance(sharpInstance: sharp.Sharp): Promise<{
-  buffer: Buffer;
-  width: number;
-  height: number;
-  size: number;
-}> {
-  const buffer = await sharpInstance.toBuffer();
-  const metadata = await sharp(buffer).metadata();
-  
-  return {
-    buffer,
-    width: metadata.width || 0,
-    height: metadata.height || 0,
-    size: buffer.length
-  };
-}
-
-/**
  * Create a thumbnail from an image buffer
  */
 export async function createThumbnail(
@@ -155,11 +155,7 @@ export async function createThumbnail(
  * Convert a buffer to a file
  */
 export function bufferToFile(image: Buffer, fileName: string) {
-  return new File(
-    [image.buffer], 
-    `compressed-${fileName}`, 
-    { type: 'image/jpeg' }
-  );
+  return new File([image.buffer], fileName, { type: 'image/jpeg' });
 }
 
 /**

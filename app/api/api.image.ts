@@ -225,19 +225,25 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const user = await requireUser(request);
   const { storageKey } = params;
 
+  const url = new URL(request.url);
+  const shouldDownload = url.searchParams.get('download') === 'true';
+
   if (!storageKey) {
     throw new Response("Storage key is required", { status: 400 });
   }
 
   const imageFile = await loadImage(user, storageKey);
 
-  return new Response(imageFile.stream(), {
-    headers: {
-      "Content-Type": imageFile.type,
-      "Content-Disposition": `attachment; filename=${imageFile.name}`,
-      "Cache-Control": "public, max-age=3600",
-    },
-  });
+  const headers: Record<string, string> = {
+    "Content-Type": imageFile.type,
+    "Cache-Control": "public, max-age=3600",
+  };
+
+  if (shouldDownload) {
+    headers["Content-Disposition"] = `attachment; filename=${imageFile.name}`;
+  }
+
+  return new Response(imageFile.stream(), { headers });
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
