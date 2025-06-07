@@ -2,7 +2,7 @@ import { requireUser } from "~/auth/session.server";
 import type { Route } from "./+types/api.posting-schedules";
 import { updatePostingSchedules, getUserPostingSchedules } from "~/db/posting-schedule-database.server";
 import type { PostingSchedule, ProposedPostingSchedule, User } from "~/model/model";
-import type { ApiResult } from "./api";
+import type { ApiResult } from "~/model/model";
 
 interface PostingScheduleUpdateResult extends ApiResult {
   schedules?: PostingSchedule[];

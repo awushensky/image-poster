@@ -1,6 +1,6 @@
 import { requireUser } from "~/auth/session.server";
 import type { Route } from "./+types/api.posted-images";
-import type { ApiResult } from "./api";
+import type { ApiResult } from "~/model/model";
 import type { PostedImage } from "~/model/model";
 import { readPostedImageEntries } from "~/db/posted-image-database.server";
 

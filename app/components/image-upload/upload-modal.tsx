@@ -22,7 +22,7 @@ export default function UploadModal({ onComplete, onCancel }: UploadModalProps) 
   const hasActiveUploads = uploads.some(upload => upload.status === 'uploading');
   const canClose = !hasActiveUploads && !isProcessing;
 
-  const uploadSingleFile = useCallback(async (file: File, index: number): Promise<void> => {
+  async function uploadSingleFile(file: File, index: number): Promise<void> {
     setUploads(prev => prev.map((upload, i) => 
       i === index ? { ...upload, status: 'uploading' } : upload
     ));
@@ -70,9 +70,9 @@ export default function UploadModal({ onComplete, onCancel }: UploadModalProps) 
           : upload
       ));
     }
-  }, []);
+  }
 
-  const processUploads = useCallback(async (files: File[]) => {
+  async function processUploads(files: File[]) {
     setIsProcessing(true);
     
     try {
@@ -91,7 +91,7 @@ export default function UploadModal({ onComplete, onCancel }: UploadModalProps) 
       console.error('Upload process failed:', error);
       setIsProcessing(false);
     }
-  }, [uploadSingleFile]);
+  }
 
   async function handleFilesSelected(fileList: FileList) {
     const files = Array.from(fileList);

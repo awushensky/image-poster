@@ -22,7 +22,7 @@ const DEFAULT_OPTIONS: Required<CompressionOptions> = {
 /**
  * Convert a FileUpload or stream to buffer
  */
-async function streamToBuffer(input: FileUpload | Readable): Promise<Buffer> {
+export async function streamToBuffer(input: FileUpload | Readable): Promise<Buffer> {
   const chunks: Buffer[] = [];
   
   // Handle FileUpload objects (which have a stream() method)
@@ -58,14 +58,14 @@ async function streamToBuffer(input: FileUpload | Readable): Promise<Buffer> {
 /**
  * Compress an image to fit within size constraints while maintaining aspect ratio
  */
-async function compressImage(
+export async function compressImage(
   inputBuffer: Buffer,
-  maxSizeKB: number,
-  maxWidth: number,
-  maxHeight: number,
-  initialQuality: number = 85
+  options: Partial<CompressionOptions> = {},
 ): Promise<Buffer> {
-  let quality = initialQuality;
+  const opts = { ...DEFAULT_OPTIONS, ...options };
+  const { maxSizeKB, maxWidth, maxHeight, quality } = opts;
+
+  let compressionQuality = quality;
   let result: { buffer: Buffer; width: number; height: number; size: number };
   
   // Start with resizing to fit within dimensions
@@ -80,7 +80,7 @@ async function compressImage(
   
   // If still too large, progressively reduce quality
   while (result.size > maxSizeKB * 1024 && quality > 20) {
-    quality -= 10;
+    compressionQuality -= 10;
     
     sharpInstance = sharp(inputBuffer)
       .resize(maxWidth, maxHeight, {
@@ -138,9 +138,9 @@ async function processSharpInstance(sharpInstance: sharp.Sharp): Promise<{
 /**
  * Create a thumbnail from an image buffer
  */
-async function createThumbnail(
+export async function createThumbnail(
   inputBuffer: Buffer,
-  size: number = 300
+  size: number = 150
 ): Promise<Buffer> {
   return sharp(inputBuffer)
     .resize(size, size, {
@@ -149,35 +149,6 @@ async function createThumbnail(
     })
     .jpeg({ quality: 80 })
     .toBuffer();
-}
-
-/**
- * Compress and resize an image to fit within specified constraints
- */
-export async function compressAndResizeImage(
-  input: Buffer | FileUpload | Readable,
-  options: Partial<CompressionOptions> = {}
-): Promise<Buffer> {
-  const opts = { ...DEFAULT_OPTIONS, ...options };
-  const inputBuffer = input instanceof Buffer ? input : await streamToBuffer(input as FileUpload | Readable);
-  return compressImage(
-    inputBuffer,
-    opts.maxSizeKB,
-    opts.maxWidth,
-    opts.maxHeight,
-    opts.quality
-  );
-}
-
-/**
- * Create a thumbnail from an image
- */
-export async function generateThumbnail(
-  input: Buffer | FileUpload | Readable,
-  size: number = 300
-): Promise<Buffer> {
-  const inputBuffer = input instanceof Buffer ? input : await streamToBuffer(input as FileUpload | Readable);
-  return createThumbnail(inputBuffer, size);
 }
 
 /**

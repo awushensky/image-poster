@@ -1,4 +1,4 @@
-import { fileStorage } from './image-storage.server';
+import { fileStorage } from '../storage/image-storage.server';
 import { postImageToBluesky } from '../auth/bluesky-auth.server';
 import { type PostingSchedule, type QueuedImage } from '../model/model';
 import { getNextImageAndUpdateSchedule as getNextImageAndUpdateSchedule } from "~/db/image-queue-database.server";

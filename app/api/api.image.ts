@@ -1,13 +1,13 @@
-import { fileStorage, thumbnailStorage } from "~/service/image-storage.server";
+import { fileStorage, thumbnailStorage } from "~/storage/image-storage.server";
 import type { Route } from "./+types/api.image";
 import { requireUser } from "~/auth/session.server";
 import { createImageQueueEntry, deleteFromImageQueue, readImageQueueEntry, reorderImageInQueue, updateImageQueueEntry } from "~/db/image-queue-database.server";
 import type { User } from "~/model/model";
 import { FileUpload, parseFormData, type FileUploadHandler } from "@mjackson/form-data-parser";
 import { createHash } from "crypto";
-import type { ApiResult } from "./api";
+import type { ApiResult } from "~/model/model";
 import { readPostedImageEntry } from "~/db/posted-image-database.server";
-import { bufferToFile, compressAndResizeImage, generateThumbnail } from "~/lib/image-utils";
+import { bufferToFile, compressImage, createThumbnail, streamToBuffer } from "~/lib/image-utils";
 
 
 interface UploadResult extends ApiResult {
@@ -75,8 +75,9 @@ async function uploadImage(user: User, request: Request): Promise<UploadResult> 
 
         // FileUpload objects are not meant to stick around for very long (they are
         // streaming data from the request.body); store them as soon as possible.
-        const thumbnailImage = bufferToFile((await generateThumbnail(fileUpload, 300)), `thumbnail-${fileUpload.name}`);
-        const compressedImage = bufferToFile(await compressAndResizeImage(fileUpload), fileUpload.name);
+        const inputBuffer = await streamToBuffer(fileUpload);
+        const thumbnailImage = bufferToFile((await createThumbnail(inputBuffer)), `thumbnail-${fileUpload.name}`);
+        const compressedImage = bufferToFile(await compressImage(inputBuffer), fileUpload.name);
 
         await fileStorage.set(storageKey, compressedImage);
         await thumbnailStorage.set(storageKey, thumbnailImage);
@@ -234,6 +235,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     headers: {
       "Content-Type": imageFile.type,
       "Content-Disposition": `attachment; filename=${imageFile.name}`,
+      "Cache-Control": "public, max-age=3600",
     },
   });
 }

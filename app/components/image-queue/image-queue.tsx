@@ -7,6 +7,8 @@ import ImageCard from './image-card';
 import Modal from '../modal';
 import EditPostModalContent from './edit-post-modal-content';
 import { type ProposedQueuedImage, type PostingSchedule, parseQueuedImage } from '~/model/model';
+import { fetchThumbnails, type ThumbnailData } from "~/lib/api-interface";
+import type { LoadResult as QueuedImagesLoadResult } from '~/api/api.image-queue';
 
 interface ImageQueueProps {
   schedules: PostingSchedule[];
@@ -22,6 +24,7 @@ const ImageQueue = ({
   onError,
 }: ImageQueueProps) => {
   const [images, setImages] = useState<ImageWithEstimatedUpload[]>([]);
+  const [thumbnails, setThumbnails] = useState<ThumbnailData[]>([]);
   const [loading, setLoading] = useState(true);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -40,14 +43,20 @@ const ImageQueue = ({
         throw new Error('Failed to fetch queued images');
       }
 
-      const result = await response.json();
+      const result = await response.json() as QueuedImagesLoadResult;
       if (!result.success) {
         throw new Error(result.error || 'Failed to load queued images');
       }
       
       const queuedImages = result.images.map(parseQueuedImage);
       const estimatedImages = estimateImageSchedule(queuedImages, schedules, userTimezone);
+      const thumbnailsResult = await fetchThumbnails(queuedImages.map(image => image.storageKey));
+      if (!thumbnailsResult.success) {
+        throw new Error(result.error || 'Failed to load image thumbnails');
+      }
+
       setImages(estimatedImages);
+      setThumbnails(thumbnailsResult.thumbnails);
       onChanged(estimatedImages.length);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load queued images';
@@ -57,7 +66,9 @@ const ImageQueue = ({
     }
   };
 
-  const sortedImages = [...images].sort((a, b) => a.queueOrder - b.queueOrder);
+  const sortedImages = [...images]
+    .map((image, index) => ({image: image, thumbnail: thumbnails[index]}))
+    .sort((a, b) => a.image.queueOrder - b.image.queueOrder);
   const editingImage = editingImageKey ? images.find(img => img.storageKey === editingImageKey) : null;
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
@@ -85,15 +96,15 @@ const ImageQueue = ({
 
     try {
       // Update local state immediately for responsive UI
-      const reorderedImages = reorderImages(images, draggedImage.storageKey, droppedImage.queueOrder);
+      const reorderedImages = reorderImages(images, draggedImage.image.storageKey, droppedImage.image.queueOrder);
       setImages(estimateImageSchedule(reorderedImages, schedules, userTimezone));
 
       // Make API call
       const formData = new FormData();
       formData.append('action', 'reorder');
-      formData.append('toOrder', droppedImage.queueOrder.toString());
+      formData.append('toOrder', droppedImage.image.queueOrder.toString());
 
-      const response = await fetch(`/api/image/${draggedImage.storageKey}`, {
+      const response = await fetch(`/api/image/${draggedImage.image.storageKey}`, {
         method: 'PUT',
         body: formData,
       });
@@ -202,7 +213,7 @@ const ImageQueue = ({
         <div className="space-y-4">
           {sortedImages.map((image, index) => (
             <div
-              key={image.storageKey}
+              key={image.image.storageKey}
               draggable={true}
               onDragStart={(e) => handleDragStart(e, index)}
               onDragOver={(e) => handleDragOver(e, index)}
@@ -224,7 +235,8 @@ const ImageQueue = ({
               {/* Fieldset automatically disables all form elements inside when disabled */}
               <fieldset disabled={false} className="border-0 p-0 m-0">
                 <ImageCard
-                  image={image}
+                  image={image.image}
+                  thumbnailBlob={`data:${image.thumbnail.contentType};base64,${image.thumbnail.data}`}
                   onDelete={handleDelete}
                   onEdit={handleEditOpen}
                 />

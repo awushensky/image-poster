@@ -72,3 +72,9 @@ export function parsePostedImage(raw: any): PostedImage {
     createdAt: new Date(raw.createdAt),
   };
 }
+export interface ApiResult {
+  status: number;
+  success?: boolean;
+  error?: string;
+  message?: string;
+}

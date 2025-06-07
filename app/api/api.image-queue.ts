@@ -1,11 +1,11 @@
 import { requireUser } from "~/auth/session.server";
 import { getImageQueueForUser } from "~/db/image-queue-database.server";
 import type { Route } from "./+types/api.image-queue";
-import type { ApiResult } from "./api";
+import type { ApiResult } from "~/model/model";
 import type { QueuedImage } from "~/model/model";
 
 
-interface LoadResult extends ApiResult {
+export interface LoadResult extends ApiResult {
   images: QueuedImage[];
 }
 
