@@ -1,4 +1,4 @@
-import { fileStorage } from "~/service/image-storage.server";
+import { fileStorage, thumbnailStorage } from "~/service/image-storage.server";
 import type { Route } from "./+types/api.image";
 import { requireUser } from "~/auth/session.server";
 import { createImageQueueEntry, deleteFromImageQueue, readImageQueueEntry, reorderImageInQueue, updateImageQueueEntry } from "~/db/image-queue-database.server";
@@ -7,6 +7,7 @@ import { FileUpload, parseFormData, type FileUploadHandler } from "@mjackson/for
 import { createHash } from "crypto";
 import type { ApiResult } from "./api";
 import { readPostedImageEntry } from "~/db/posted-image-database.server";
+import { bufferToFile, compressAndResizeImage, generateThumbnail } from "~/lib/image-utils";
 
 
 interface UploadResult extends ApiResult {
@@ -72,16 +73,15 @@ async function uploadImage(user: User, request: Request): Promise<UploadResult> 
           .update(`${user.did}-${fileUpload.name}-${Date()}`)
           .digest('hex');
 
-        try {
-          // FileUpload objects are not meant to stick around for very long (they are
-          // streaming data from the request.body); store them as soon as possible.
-          await fileStorage.set(storageKey, fileUpload);
-          await createImageQueueEntry(user.did, storageKey, fileNameToPostText(fileUpload.name));
-          uploadedStorageKey = storageKey;
-        } catch (error) {
-          console.error('Upload error:', error);
-          throw error;
-        }
+        // FileUpload objects are not meant to stick around for very long (they are
+        // streaming data from the request.body); store them as soon as possible.
+        const thumbnailImage = bufferToFile((await generateThumbnail(fileUpload, 300)), `thumbnail-${fileUpload.name}`);
+        const compressedImage = bufferToFile(await compressAndResizeImage(fileUpload), fileUpload.name);
+
+        await fileStorage.set(storageKey, compressedImage);
+        await thumbnailStorage.set(storageKey, thumbnailImage);
+        await createImageQueueEntry(user.did, storageKey, fileNameToPostText(fileUpload.name));
+        uploadedStorageKey = storageKey;
       } else {
         throw new Error("Attempted to upload file with unsupported field name or type");
       }

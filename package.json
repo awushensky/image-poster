@@ -29,6 +29,7 @@
     "react-dom": "^19.1.0",
     "react-router": "^7.5.3",
     "react-router-dom": "^7.6.0",
+    "sharp": "^0.34.2",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7"
   },
@@ -38,6 +39,7 @@
     "@types/node": "^20",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
+    "@types/sharp": "^0.31.1",
     "@types/sqlite3": "^3.1.11",
     "@vitest/ui": "^3.1.4",
     "c8": "^10.1.3",

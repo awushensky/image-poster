@@ -3,3 +3,7 @@ import { LocalFileStorage } from "@mjackson/file-storage/local";
 export const fileStorage = new LocalFileStorage(
   "./uploads/images"
 );
+
+export const thumbnailStorage = new LocalFileStorage(
+  "./uploads/thumbnails"
+)
