@@ -1,15 +1,10 @@
 import { requireUser } from "~/auth/session.server";
 import type { Route } from "./+types/api.posted-images";
-import type { ApiResult } from "~/model/model";
-import type { PostedImage } from "~/model/model";
 import { readPostedImageEntries } from "~/db/posted-image-database.server";
+import type { PostedImagesLoadResult } from "~/api-interface/posted-images";
 
 
-interface LoadResult extends ApiResult {
-  images: PostedImage[];
-}
-
-async function loadPostedImages(userDid: string): Promise<LoadResult> {
+async function loadPostedImages(userDid: string): Promise<PostedImagesLoadResult> {
   return {
     status: 200,
     success: true,

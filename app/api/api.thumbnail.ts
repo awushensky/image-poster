@@ -4,7 +4,7 @@ import type { Route } from "./+types/api.thumbnail";
 import { getImageQueueForUser, readImageQueueEntry } from "~/db/image-queue-database.server";
 import { readPostedImageEntries, readPostedImageEntry } from "~/db/posted-image-database.server";
 import type { User } from "~/model/model";
-import type { ThumbnailBatchResult } from "~/lib/api-interface";
+import type { ThumbnailBatchResult } from "~/api-interface/thumbnail";
 
 
 /**

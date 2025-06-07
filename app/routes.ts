@@ -9,6 +9,7 @@ export default [
 
   route("api/image/:storageKey?", "api/api.image.ts"),
   route("api/thumbnail/:storageKey?", "api/api.thumbnail.ts"),
+  route("api/image-counts", "api/api.image-counts.ts"),
   route("api/image-queue", "api/api.image-queue.ts"),
   route("api/posted-images", "api/api.posted-images.ts"),
   route("api/posting-schedules", "api/api.posting-schedules.ts"),

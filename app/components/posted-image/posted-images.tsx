@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { parsePostedImage, type PostedImage } from '~/model/model';
+import { type PostedImage } from '~/model/model';
+import { parsePostedImage } from "~/api-interface/posted-images";
 import PostedImageCard from './posted-image-card';
 
 interface PostedImagesProps {
@@ -29,7 +30,6 @@ const PostedImages: React.FC<PostedImagesProps> = ({ isVisible, onChanged, onErr
       }
 
       const result = await response.json();
-      console.log(`Got result ${JSON.stringify(result)}`);
       if (!result.success) {
         throw new Error(result.error || 'Failed to load posted images');
       }

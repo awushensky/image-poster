@@ -1,25 +1,17 @@
 import { requireUser } from "~/auth/session.server";
 import type { Route } from "./+types/api.posting-schedules";
 import { updatePostingSchedules, getUserPostingSchedules } from "~/db/posting-schedule-database.server";
-import type { PostingSchedule, ProposedPostingSchedule, User } from "~/model/model";
-import type { ApiResult } from "~/model/model";
+import type { ProposedPostingSchedule, User } from "~/model/model";
+import type { PostingScheduleGetResult } from "~/api-interface/posting-schedules";
+import type { PostingScheduleUpdateResult } from "~/api-interface/posting-schedules";
 
-interface PostingScheduleUpdateResult extends ApiResult {
-  schedules?: PostingSchedule[];
-}
-
-interface PostingScheduleGetResult extends ApiResult {
-  schedules?: PostingSchedule[];
-}
 
 async function getSchedules(user: User): Promise<PostingScheduleGetResult> {
   try {
-    const schedules = await getUserPostingSchedules(user.did);
-
     return {
       status: 200,
       success: true,
-      schedules: schedules,
+      schedules: await getUserPostingSchedules(user.did),
     };
   } catch (error) {
     return {
@@ -75,7 +67,7 @@ export async function action({ request }: Route.ActionArgs) {
       return Response.json(result, { status: result.status });
     }
     default: {
-      const result: ApiResult = {
+      const result: PostingScheduleUpdateResult = {
         status: 405,
         success: false,
         error: `Unsupported method: ${request.method}`

@@ -42,39 +42,7 @@ export interface PostedImage {
   createdAt: Date;
 }
 
-export function parseUser(raw: any): User {
-  return {
-    ...raw,
-    createdAt: new Date(raw.createdAt),
-    lastLogin: new Date(raw.lastLogin),
-  }
-}
-
-export function parsePostingSchedule(raw: any): PostingSchedule {
-  return {
-    ...raw,
-    lastExecuted: raw.lastExecuted ? new Date(raw.lastExecuted) : undefined,
-    createdAt: new Date(raw.createdAt),
-    updatedAt: new Date(raw.updatedAt),
-  }
-}
-
-export function parseQueuedImage(raw: any): QueuedImage {
-  return {
-    ...raw,
-    createdAt: new Date(raw.createdAt),
-  }
-}
-
-export function parsePostedImage(raw: any): PostedImage {
-  return {
-    ...raw,
-    createdAt: new Date(raw.createdAt),
-  };
-}
-export interface ApiResult {
-  status: number;
-  success?: boolean;
-  error?: string;
-  message?: string;
+export interface ImageCounts {
+  queued: number,
+  posted: number,
 }

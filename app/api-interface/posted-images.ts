@@ -1,0 +1,29 @@
+import type { PostedImage } from "~/model/model";
+import type { ApiResult } from "./api";
+
+
+export interface PostedImagesLoadResult extends ApiResult {
+  images: PostedImage[];
+}
+
+export function parsePostedImage(raw: any): PostedImage {
+  return {
+    ...raw,
+    createdAt: new Date(raw.createdAt),
+  };
+}
+
+export async function fetchPostedImages(): Promise<PostedImage> {
+  const response = await fetch('/api/posted-images');
+  if (!response.ok) {
+    throw new Error('Failed to fetch posted images');
+  }
+
+  const result = await response.json();
+  if (!result.success) {
+    throw new Error(result.error || 'Failed to load posted images');
+  }
+
+  return (result.images || []).map(parsePostedImage);
+}
+

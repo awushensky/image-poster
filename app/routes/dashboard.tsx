@@ -11,19 +11,23 @@ import { getUserPostingSchedules } from "~/db/posting-schedule-database.server";
 import UploadModal from "~/components/image-upload/upload-modal";
 import ScheduleModal from "~/components/scheduling/schedule-modal";
 import { Confirmation } from "~/components/confirmation";
+import { getImageQueueSize } from "~/db/image-queue-database.server";
+import { readPostedImageEntriesCount } from "~/db/posted-image-database.server";
 
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
   const schedules = await getUserPostingSchedules(user.did);
+  const initialQueuedImageCount = await getImageQueueSize(user.did);
+  const initialPostedImageCount = await readPostedImageEntriesCount(user.did);
   
-  return { user, schedules };
+  return { user, schedules, initialQueuedImageCount, initialPostedImageCount };
 }
 
 type TabType = 'queue' | 'posted';
 
 export default function Dashboard({ loaderData }: Route.ComponentProps) {
-  const { user, schedules } = loaderData
+  const { user, schedules, initialQueuedImageCount, initialPostedImageCount } = loaderData
 
   const revalidator = useRevalidator();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -31,8 +35,8 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
-  const [queueCount, setQueueCount] = useState(0);
-  const [postedCount, setPostedCount] = useState(0);
+  const [queueCount, setQueueCount] = useState(initialQueuedImageCount);
+  const [postedCount, setPostedCount] = useState(initialPostedImageCount);
   const [error, setError] = useState<string | undefined>(undefined);
 
   const getActiveTabFromParams = (): TabType => {

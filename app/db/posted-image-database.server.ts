@@ -47,6 +47,19 @@ export async function readPostedImageEntries(
   });
 }
 
+export async function readPostedImageEntriesCount(
+  userDid: string,
+): Promise<number> {
+  return await useDatabase(async db => {
+    const row: ({ count: number } | undefined) = await db.get(`
+      SELECT count(1) as count FROM posted_images WHERE user_did = ?`,
+      [userDid]
+    )
+
+    return row?.count || 0;
+  });
+}
+
 /**
  * Move an image from the posting queue to the posted list
  */

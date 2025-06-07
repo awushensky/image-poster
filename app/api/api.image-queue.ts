@@ -1,15 +1,10 @@
 import { requireUser } from "~/auth/session.server";
 import { getImageQueueForUser } from "~/db/image-queue-database.server";
 import type { Route } from "./+types/api.image-queue";
-import type { ApiResult } from "~/model/model";
-import type { QueuedImage } from "~/model/model";
+import type { QueuedImagesLoadResult } from "~/api-interface/image-queue";
 
 
-export interface LoadResult extends ApiResult {
-  images: QueuedImage[];
-}
-
-async function loadImageQueue(userDid: string): Promise<LoadResult> {
+async function loadImageQueue(userDid: string): Promise<QueuedImagesLoadResult> {
   return {
     status: 200,
     success: true,

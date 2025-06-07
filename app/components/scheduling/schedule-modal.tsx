@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '~/components/modal';
 import ScheduleModalContent from './schedule-modal-content';
-import { parsePostingSchedule, type PostingSchedule, type ProposedPostingSchedule, type User } from '~/model/model';
+import { type PostingSchedule, type ProposedPostingSchedule, type User } from '~/model/model';
+import { updatePostingSchedules } from "~/api-interface/posting-schedules";
+import { fetchPostingSchedules } from "~/api-interface/posting-schedules";
 
 interface ScheduleModalProps {
   isOpen: boolean;
@@ -33,18 +35,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({
     setLoadError(null);
 
     try {
-      const response = await fetch('/api/posting-schedules');
-      if (!response.ok) {
-        throw new Error('Failed to fetch schedules');
-      }
-
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to load schedules');
-      }
-
-      const schedules = (data.schedules || []).map(parsePostingSchedule)
-      setSchedules(schedules);
+      setSchedules(await fetchPostingSchedules());
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load schedule data';
       setLoadError(errorMessage);
@@ -58,21 +49,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({
     const tasks = [];
 
     if (schedules && JSON.stringify(updatedSchedules) !== JSON.stringify(schedules)) {
-      tasks.push(
-        fetch('/api/posting-schedules', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ schedules: updatedSchedules })
-        }).then(async (response) => {
-          const result = await response.json();
-          if (!result.success) {
-            throw new Error(result.error || 'Failed to update schedules');
-          }
-          return result;
-        })
-      );
+      tasks.push(updatePostingSchedules(updatedSchedules));
     }
 
     if (timezone !== user.timezone) {

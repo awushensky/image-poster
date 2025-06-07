@@ -6,9 +6,10 @@ import { deleteImage, reorderImages, updateImage } from '~/lib/dashboard-utils';
 import ImageCard from './image-card';
 import Modal from '../modal';
 import EditPostModalContent from './edit-post-modal-content';
-import { type ProposedQueuedImage, type PostingSchedule, parseQueuedImage } from '~/model/model';
-import { fetchThumbnails, type ThumbnailData } from "~/lib/api-interface";
-import type { LoadResult as QueuedImagesLoadResult } from '~/api/api.image-queue';
+import { type ProposedQueuedImage, type PostingSchedule } from '~/model/model';
+import { fetchQueuedImages } from "~/api-interface/image-queue";
+import { fetchThumbnails } from "~/api-interface/thumbnail";
+import { type ThumbnailData } from "~/api-interface/thumbnail";
 
 interface ImageQueueProps {
   schedules: PostingSchedule[];
@@ -38,25 +39,12 @@ const ImageQueue = ({
   const loadImages = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/image-queue`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch queued images');
-      }
-
-      const result = await response.json() as QueuedImagesLoadResult;
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to load queued images');
-      }
-      
-      const queuedImages = result.images.map(parseQueuedImage);
+      const queuedImages = await fetchQueuedImages();
       const estimatedImages = estimateImageSchedule(queuedImages, schedules, userTimezone);
-      const thumbnailsResult = await fetchThumbnails(queuedImages.map(image => image.storageKey));
-      if (!thumbnailsResult.success) {
-        throw new Error(result.error || 'Failed to load image thumbnails');
-      }
+      const thumbnails = await fetchThumbnails(queuedImages.map(image => image.storageKey));
 
       setImages(estimatedImages);
-      setThumbnails(thumbnailsResult.thumbnails);
+      setThumbnails(thumbnails);
       onChanged(estimatedImages.length);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load queued images';

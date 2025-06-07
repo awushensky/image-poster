@@ -101,6 +101,17 @@ export async function getImageQueueForUser(userDid: string): Promise<QueuedImage
   return rows.map(transformQueuedImageRow);
 }
 
+export async function getImageQueueSize(userDid: string): Promise<number> {
+  return await useDatabase(async db => {
+    const row: ({ count: number } | undefined) = await db.get(`
+      SELECT count(1) as count FROM queued_images WHERE user_did = ?`,
+      [userDid]
+    )
+
+    return row?.count || 0;
+  });
+}
+
 export async function reorderImageInQueue(
   userDid: string,
   sourceImageStorageKey: string,

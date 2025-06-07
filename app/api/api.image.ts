@@ -5,9 +5,9 @@ import { createImageQueueEntry, deleteFromImageQueue, readImageQueueEntry, reord
 import type { User } from "~/model/model";
 import { FileUpload, parseFormData, type FileUploadHandler } from "@mjackson/form-data-parser";
 import { createHash } from "crypto";
-import type { ApiResult } from "~/model/model";
 import { readPostedImageEntry } from "~/db/posted-image-database.server";
 import { bufferToFile, compressImage, createThumbnail, streamToBuffer } from "~/lib/image-utils";
+import type { ApiResult } from "~/api-interface/api";
 
 
 interface UploadResult extends ApiResult {
