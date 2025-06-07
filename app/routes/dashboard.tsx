@@ -6,11 +6,12 @@ import PostedImages from "~/components/posted-image/posted-images";
 import Tabs from "~/components/tabs";
 import Header from "~/components/header";
 import { useEffect, useState } from "react";
-import { useRevalidator } from "react-router";
+import { useRevalidator, useSearchParams } from "react-router";
 import { getUserPostingSchedules } from "~/db/posting-schedule-database.server";
 import UploadModal from "~/components/image-upload/upload-modal";
 import ScheduleModal from "~/components/scheduling/schedule-modal";
 import { Confirmation } from "~/components/confirmation";
+
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
@@ -25,24 +26,25 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
   const { user, schedules } = loaderData
 
   const revalidator = useRevalidator();
+  const [searchParams, setSearchParams] = useSearchParams();
+  
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>('queue');
   const [queueCount, setQueueCount] = useState(0);
   const [postedCount, setPostedCount] = useState(0);
   const [error, setError] = useState<string | undefined>(undefined);
 
-  useEffect(() => {
-    // Reset modals whenever loader data changes
-    setScheduleModalOpen(false);
-    setUploadModalOpen(false);
-    setLogoutConfirmOpen(false);
-  }, [loaderData]);
-
-  const handleSettingsOpen = () => {
-    setScheduleModalOpen(true);
+  const getActiveTabFromParams = (): TabType => {
+    const tab = searchParams.get('tab');
+    return (tab === 'posted' || tab === 'queue') ? tab : 'queue';
   };
+
+  const [activeTab, setActiveTab] = useState<TabType>(getActiveTabFromParams);
+
+  useEffect(() => {
+    setActiveTab(getActiveTabFromParams());
+  }, [searchParams]);
 
   const handleScheduleModalClose = () => {
     setScheduleModalOpen(false);
@@ -95,6 +97,15 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
 
   const handleLogoutCancel = () => {
     setLogoutConfirmOpen(false);
+  };
+
+  const handleTabChange = (tabId: string) => {
+    const newTab = tabId as TabType;
+    setActiveTab(newTab);
+    
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.set('tab', newTab);
+    setSearchParams(newSearchParams, { replace: true });
   };
   
   return (
@@ -192,7 +203,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
                 { id: 'posted', label: 'Posted', count: postedCount }
               ]}
               activeTab={activeTab}
-              onTabChange={(tabId) => setActiveTab(tabId as TabType) }
+              onTabChange={handleTabChange}
             />
           </div>
 
