@@ -2,12 +2,9 @@ import { requireUser } from "~/auth/session.server";
 import type { Route } from "./+types/api.user";
 import type { User } from "~/model/model";
 import { createOrUpdateUser } from "~/db/user-database.server";
-import type { ApiResult } from "~/api-interface/api-interface";
+import type { UpdateUserResult } from "~/api-interface/user";
+import type { ApiResult } from "~/api-interface/api";
 
-
-interface UpdateUserResult extends ApiResult {
-  user?: User;
-}
 
 async function updateUser(user: User, request: Request): Promise<UpdateUserResult> {
   try {
@@ -45,6 +42,7 @@ export async function action({ request }: Route.ActionArgs) {
       const result = await updateUser(user, request);
       return Response.json(result, { status: result.status });
     }
+    
     default: {
       const result: ApiResult = {
         status: 405,

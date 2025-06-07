@@ -4,6 +4,7 @@ import ScheduleModalContent from './schedule-modal-content';
 import { type PostingSchedule, type ProposedPostingSchedule, type User } from '~/model/model';
 import { updatePostingSchedules } from "~/api-interface/posting-schedules";
 import { fetchPostingSchedules } from "~/api-interface/posting-schedules";
+import { updateUser } from '~/api-interface/user';
 
 interface ScheduleModalProps {
   isOpen: boolean;
@@ -53,21 +54,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({
     }
 
     if (timezone !== user.timezone) {
-      tasks.push(
-        fetch('/api/user', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ timezone })
-        }).then(async (response) => {
-          const result = await response.json();
-          if (!result.success) {
-            throw new Error(result.error || 'Failed to update timezone');
-          }
-          return result;
-        })
-      );
+      tasks.push(updateUser({ timezone }));
     }
 
     try {
