@@ -3,6 +3,7 @@ import Modal from "~/components/modal";
 import ImageUploadTarget from "./image-upload-target";
 import { uploadImage } from "~/api-interface/image";
 
+
 interface UploadProgress {
   file: File;
   progress: number;

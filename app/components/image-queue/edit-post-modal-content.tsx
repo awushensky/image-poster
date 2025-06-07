@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Save, X, AlertTriangle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Save, X } from 'lucide-react';
 import type { ProposedQueuedImage } from '~/model/model';
+
 
 interface EditPostModalContentProps {
   initialText: string;

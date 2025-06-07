@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
 
+
 interface ImageUploadProps {
   acceptedTypes?: string;
   onFilesSelected: (files: FileList) => void;

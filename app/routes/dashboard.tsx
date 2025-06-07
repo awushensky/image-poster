@@ -4,7 +4,6 @@ import { requireUser } from "~/auth/session.server";
 import ImageQueue from "~/components/image-queue/image-queue";
 import PostedImages from "~/components/posted-image/posted-images";
 import Tabs from "~/components/tabs";
-import Header from "~/components/header";
 import { useEffect, useState } from "react";
 import { useRevalidator, useSearchParams } from "react-router";
 import { getUserPostingSchedules } from "~/db/posting-schedule-database.server";
@@ -13,6 +12,8 @@ import ScheduleModal from "~/components/scheduling/schedule-modal";
 import { Confirmation } from "~/components/confirmation";
 import { getImageQueueSize } from "~/db/image-queue-database.server";
 import { readPostedImageEntriesCount } from "~/db/posted-image-database.server";
+import Layout from "~/components/layout";
+import { ErrorBanner } from "~/components/error-banner";
 
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -91,7 +92,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
     setError(undefined);
   };
 
-  const handleLogoutAttempt = () => {
+  const handleLogoutClick = () => {
     setLogoutConfirmOpen(true);
   }
 
@@ -113,7 +114,9 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
   };
   
   return (
-    <div className="min-h-screen bg-gray-50">
+    <Layout
+      user={user}
+      onLogoutClick={handleLogoutClick}>
       <ScheduleModal
         isOpen={scheduleModalOpen}
         user={user}
@@ -140,42 +143,11 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
         />
       )}
 
-      <Header 
-        user={user}
-        onLogoutClick={handleLogoutAttempt}
-      />
-
       <main className={`max-w-7xl mx-auto p-6`}>
-        {/* Error Banner */}
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
-            <div className="flex justify-between items-start">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">
-                    Error
-                  </h3>
-                  <div className="mt-2 text-sm text-red-700">
-                    {error}
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={handleErrorDismiss}
-                className="ml-3 text-red-400 hover:text-red-600 transition-colors"
-              >
-                <span className="sr-only">Dismiss</span>
-                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </div>
-          </div>
+          <ErrorBanner
+            error={error}
+            onDismiss={handleErrorDismiss}/>
         )}
 
         <ScheduleSummary
@@ -199,7 +171,6 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
             </button>
           </div>
 
-          {/* Tab Navigation */}
           <div className="mb-6">
             <Tabs
               tabs={[
@@ -211,7 +182,6 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
             />
           </div>
 
-          {/* Tab Content */}
           {activeTab === 'queue' && (
             <ImageQueue
               schedules={schedules}
@@ -230,6 +200,6 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
           )}
         </div>
       </main>
-    </div>
+    </Layout>
   );
 }

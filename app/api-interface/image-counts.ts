@@ -1,6 +1,7 @@
 import type { ImageCounts } from "~/model/model";
 import type { ApiResult } from "./api";
 
+
 export interface ImageCountsFetchResult extends ApiResult {
   queuedImages: number;
   postedImages: number;

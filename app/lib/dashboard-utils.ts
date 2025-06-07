@@ -1,13 +1,10 @@
 import type { ProposedQueuedImage, QueuedImage } from "~/model/model";
 
+
 export function reorderImages(images: QueuedImage[], imageToReorderStorageKey: string, toOrder: number): QueuedImage[] {
   const selectedImageIndex = images.findIndex(image => image.storageKey === imageToReorderStorageKey);
   const reorderedImages = moveItem(images, selectedImageIndex, toOrder - 1)
   return updateQueueOrders(reorderedImages);
-}
-
-export function reorderThumbnails() {
-  
 }
 
 export function updateImage(images: QueuedImage[], imageToUpdateStorageKey: string, update: Partial<ProposedQueuedImage>) {

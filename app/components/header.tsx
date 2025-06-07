@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { User as UserIcon, LogOut, Settings, Delete } from 'lucide-react';
+import { User as UserIcon, LogOut } from 'lucide-react';
 import type { User } from '~/model/model';
+
 
 interface HeaderProps {
   user: User;
