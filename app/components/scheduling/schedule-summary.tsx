@@ -1,4 +1,4 @@
-import type { ProposedPostingSchedule } from "~/model/model";
+import type { ProposedPostingSchedule } from "~/model/posting-schedules";
 import ScheduleChart from "./schedule-chart";
 
 

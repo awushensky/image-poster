@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Calendar, AlertTriangle, CheckCircle } from 'lucide-react';
-import type { PostedImage } from '~/model/model';
+import type { PostedImage } from "~/model/posted-images";
 import { formatRelativeTime } from '~/lib/time-utils';
 import Modal from '../modal';
 

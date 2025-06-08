@@ -1,6 +1,6 @@
 import { requireUser } from "~/auth/session.server";
 import type { Route } from "./+types/api.user";
-import type { User } from "~/model/model";
+import type { User } from "~/model/user";
 import { createOrUpdateUser } from "~/db/user-database.server";
 import type { UpdateUserResult } from "~/api-interface/user";
 import type { ApiResult } from "~/api-interface/api";

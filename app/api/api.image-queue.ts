@@ -3,7 +3,7 @@ import { deleteFromImageQueue, getImageQueueForUser, readImageQueueEntry, reorde
 import type { Route } from "./+types/api.image-queue";
 import type { QueuedImageDeleteResult, QueuedImagesLoadResult, QueuedImageUpdateResult } from "~/api-interface/image-queue";
 import { fileStorage, thumbnailStorage } from "~/storage/image-storage.server";
-import type { User } from "~/model/model";
+import type { User } from "~/model/user";
 import type { ApiResult } from "~/api-interface/api";
 
 

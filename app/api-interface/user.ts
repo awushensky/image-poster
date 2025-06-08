@@ -1,4 +1,4 @@
-import type { User } from "~/model/model";
+import type { User } from "~/model/user";
 import type { ApiResult } from "./api";
 
 

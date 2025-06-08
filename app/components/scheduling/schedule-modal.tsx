@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '~/components/modal';
 import ScheduleModalContent from './schedule-modal-content';
-import { type PostingSchedule, type ProposedPostingSchedule, type User } from '~/model/model';
+import { type ProposedPostingSchedule } from "~/model/posting-schedules";
+import { type PostingSchedule } from "~/model/posting-schedules";
+import { type User } from "~/model/user";
 import { updatePostingSchedules } from "~/api-interface/posting-schedules";
 import { fetchPostingSchedules } from "~/api-interface/posting-schedules";
 import { updateUser } from '~/api-interface/user';

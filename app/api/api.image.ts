@@ -2,7 +2,7 @@ import { fileStorage, thumbnailStorage } from "~/storage/image-storage.server";
 import type { Route } from "./+types/api.image";
 import { requireUser } from "~/auth/session.server";
 import { createImageQueueEntry, readImageQueueEntry } from "~/db/image-queue-database.server";
-import type { User } from "~/model/model";
+import type { User } from "~/model/user";
 import { FileUpload, parseFormData, type FileUploadHandler } from "@mjackson/form-data-parser";
 import { createHash } from "crypto";
 import { readPostedImageEntry } from "~/db/posted-image-database.server";

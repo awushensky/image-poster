@@ -1,4 +1,5 @@
-import type { PostingSchedule, ProposedPostingSchedule } from "~/model/model";
+import type { ProposedPostingSchedule } from "~/model/posting-schedules";
+import type { PostingSchedule } from "~/model/posting-schedules";
 import type { ApiResult } from "./api";
 
 

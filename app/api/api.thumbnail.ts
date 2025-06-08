@@ -3,7 +3,7 @@ import { thumbnailStorage } from "~/storage/image-storage.server";
 import type { Route } from "./+types/api.thumbnail";
 import { getImageQueueForUser, readImageQueueEntry } from "~/db/image-queue-database.server";
 import { readPostedImageEntries, readPostedImageEntry } from "~/db/posted-image-database.server";
-import type { User } from "~/model/model";
+import type { User } from "~/model/user";
 import type { ThumbnailBatchResult } from "~/api-interface/thumbnail";
 
 
