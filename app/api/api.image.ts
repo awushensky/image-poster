@@ -69,8 +69,8 @@ async function uploadImage(user: User, request: Request): Promise<ImageUploadRes
         // FileUpload objects are not meant to stick around for very long (they are
         // streaming data from the request.body); store them as soon as possible.
         const inputBuffer = await streamToBuffer(fileUpload);
-        const thumbnailImage = bufferToFile((await createThumbnail(inputBuffer)), `thumbnail-${fileUpload.name}`);
-        const compressedImage = bufferToFile(await compressImage(inputBuffer), fileUpload.name);
+        const thumbnailImage = await bufferToFile(await createThumbnail(inputBuffer), `thumbnail-${fileUpload.name}`);
+        const compressedImage = await bufferToFile(await compressImage(inputBuffer), fileUpload.name);
 
         await fileStorage.set(storageKey, compressedImage);
         await thumbnailStorage.set(storageKey, thumbnailImage);

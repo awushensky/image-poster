@@ -6,6 +6,7 @@ import { getUserTimezone } from '../lib/time-utils';
 import { deleteOAuthSession, getOAuthSession, storeOAuthSession } from '~/db/oauth-session-database.server';
 import { getMutex } from '../lib/mutex';
 import { deleteUserSession } from '~/db/user-session-database.server';
+import { getImageMetadata } from '~/lib/image-utils';
 
 
 let oauthClient: NodeOAuthClient;
@@ -195,8 +196,12 @@ export async function postImageToBluesky(
 
     const agent = await restoreUserSession(userDid);
 
+    const metadata = await getImageMetadata(imageBuffer);
+    const width = metadata.width || 0;
+    const height = metadata.height || 0;
+
     const uploadResult = await agent.uploadBlob(imageBuffer, {
-      encoding: 'image/jpeg'
+      encoding: `image/${metadata.format}`,
     });
 
     if (!uploadResult.success) {
@@ -209,7 +214,11 @@ export async function postImageToBluesky(
         $type: 'app.bsky.embed.images',
         images: [{
           alt: altText,
-          image: uploadResult.data.blob
+          image: uploadResult.data.blob,
+          aspectRatio: {
+            width: width,
+            height: height
+          }
         }]
       }
     };

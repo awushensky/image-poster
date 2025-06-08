@@ -87,6 +87,8 @@ export async function compressImage(
 
   let compressionQuality = quality;
   let result: { buffer: Buffer; width: number; height: number; size: number };
+
+  const originalMetadata = await getImageMetadata(inputBuffer);
   
   // Start with resizing to fit within dimensions
   let sharpInstance = sharp(inputBuffer)
@@ -142,34 +144,33 @@ export async function createThumbnail(
   inputBuffer: Buffer,
   size: number = 150
 ): Promise<Buffer> {
-  return sharp(inputBuffer)
+  return await sharp(inputBuffer)
     .resize(size, size, {
       fit: 'cover',
       position: 'center'
     })
-    .jpeg({ quality: 80 })
     .toBuffer();
 }
 
 /**
  * Convert a buffer to a file
  */
-export function bufferToFile(image: Buffer, fileName: string) {
-  return new File([image.buffer], fileName, { type: 'image/jpeg' });
+export async function bufferToFile(image: Buffer, fileName: string) {
+  const metadata = await getImageMetadata(image);
+  return new File([image.buffer], fileName, { type: `image/${metadata.format}` });
 }
 
 /**
  * Get image metadata without processing
  */
-export async function getImageMetadata(input: Buffer | FileUpload | Readable) {
-  const inputBuffer = input instanceof Buffer ? input : await streamToBuffer(input as FileUpload | Readable);
-  const metadata = await sharp(inputBuffer).metadata();
+export async function getImageMetadata(input: Buffer) {
+  const metadata = await sharp(input).metadata();
   
   return {
     width: metadata.width || 0,
     height: metadata.height || 0,
     format: metadata.format,
-    size: inputBuffer.length,
-    sizeKB: Math.round(inputBuffer.length / 1024 * 100) / 100
+    size: input.length,
+    sizeKB: Math.round(input.length / 1024 * 100) / 100
   };
 }

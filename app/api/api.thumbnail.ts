@@ -37,7 +37,7 @@ async function loadThumbnails(user: User, storageKeys: string[]): Promise<Thumbn
         return {
           storageKey,
           data: base64Data,
-          contentType: thumbnailFile.type || 'image/jpeg',
+          contentType: thumbnailFile.type,
           size: buffer.length
         };
       } else {
