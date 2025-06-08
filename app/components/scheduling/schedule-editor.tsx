@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Clock, Plus, X, Globe, PauseCircle, PlayCircle } from 'lucide-react';
-import type { ProposedPostingSchedule } from '~/model/model';
+import type { ProposedPostingSchedule } from "~/model/posting-schedule";
 import { cronToDays, cronToDescription, getNextExecutionsForMultipleSchedules, timeToCron } from '~/lib/cron-utils';
 import { commonTimezones, DAY_NAMES } from '~/lib/time-utils';
 import { DaysOfWeekInput } from './days-of-week-input';

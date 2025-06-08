@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { type PostedImage } from '~/model/model';
+import { type PostedImage } from "~/model/posted-images";
 import { fetchPostedImages } from "~/api-interface/posted-images";
 import PostedImageCard from './posted-image-card';
 import { fetchThumbnails, type ThumbnailData } from '~/api-interface/thumbnail';

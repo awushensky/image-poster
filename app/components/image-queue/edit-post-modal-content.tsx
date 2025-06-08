@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Save, X } from 'lucide-react';
-import type { ProposedQueuedImage } from '~/model/model';
+import type { ProposedQueuedImage } from "~/model/queued-images";
 
 
 interface EditPostModalContentProps {

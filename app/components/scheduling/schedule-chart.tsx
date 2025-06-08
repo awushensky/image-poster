@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { ProposedPostingSchedule } from "~/model/model";
+import type { ProposedPostingSchedule } from "~/model/posting-schedule";
 import { cronToDescription, cronToTime } from "~/lib/cron-utils";
 import { DAY_NAMES, formatTime, getCurrentTimeInTimezone as getTimeInTimezone } from '~/lib/time-utils';
 

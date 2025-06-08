@@ -1,7 +1,7 @@
-import type { ProposedQueuedImage, QueuedImage } from "~/model/model";
+import type { PaginatedQueuedImages, ProposedQueuedImage } from "~/model/queued-images";
+import type { QueuedImage } from "~/model/queued-images";
 import { useDatabase } from "./database.server";
 import { getMutex } from "~/lib/mutex";
-
 
 const MUTEX_PURPOSE = "image-queue";
 
@@ -92,13 +92,37 @@ export async function updateImageQueueEntry(
   });
 }
 
-export async function getImageQueueForUser(userDid: string): Promise<QueuedImage[]> {
-  const rows: QueuedImageRow[] = await useDatabase(async db => await db.all(
-    'SELECT * FROM queued_images WHERE user_did = ? ORDER BY queue_order ASC',
-    [userDid]
-  ));
+export async function getImageQueueForUser(
+  userDid: string,
+  requestedLimit: number = 50,
+  cursor?: number
+): Promise<PaginatedQueuedImages> {
+  const limit = requestedLimit > 50 ? 50 : requestedLimit;
 
-  return rows.map(transformQueuedImageRow);
+  return await useDatabase(async db => {
+    let query = 'SELECT * FROM queued_images WHERE user_did = ?';
+    const params: any[] = [userDid];
+    
+    if (cursor !== undefined) {
+      query += ' AND queue_order > ?';
+      params.push(cursor);
+    }
+    
+    query += ' ORDER BY queue_order ASC LIMIT ?';
+    params.push(limit + 1); // Fetch one extra to check if there are more
+    
+    const rows: QueuedImageRow[] = await db.all(query, params);
+    
+    const hasMore = rows.length > limit;
+    const images = rows.slice(0, limit).map(transformQueuedImageRow);
+    const nextCursor = hasMore ? images[images.length - 1]?.queueOrder : undefined;
+    
+    return {
+      images,
+      hasMore,
+      nextCursor
+    };
+  });
 }
 
 export async function getImageQueueSize(userDid: string): Promise<number> {
@@ -240,4 +264,3 @@ export async function getNextImageAndUpdateSchedule(
     return maybeTransformQueuedImageRow(row);
   });
 }
-

@@ -1,4 +1,5 @@
-import type { ProposedQueuedImage, QueuedImage } from "~/model/model";
+import type { ProposedQueuedImage } from "~/model/queued-images";
+import type { QueuedImage } from "~/model/queued-images";
 
 
 export function reorderImages(images: QueuedImage[], imageToReorderStorageKey: string, toOrder: number): QueuedImage[] {

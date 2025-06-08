@@ -1,4 +1,5 @@
-import type { PostedImage, QueuedImage } from "~/model/model";
+import type { PostedImage } from "~/model/posted-images";
+import type { QueuedImage } from "~/model/queued-images";
 import { useDatabase } from "./database.server";
 
 

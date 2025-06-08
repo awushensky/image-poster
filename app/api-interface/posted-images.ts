@@ -1,4 +1,4 @@
-import type { PostedImage } from "~/model/model";
+import type { PostedImage } from "~/model/posted-images";
 import type { ApiResult } from "./api";
 
 
@@ -26,4 +26,3 @@ export async function fetchPostedImages(): Promise<PostedImage[]> {
 
   return (result.images || []).map(parsePostedImage);
 }
-

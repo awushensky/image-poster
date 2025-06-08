@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { type PostingSchedule, type ProposedPostingSchedule } from '~/model/model';
+import { type ProposedPostingSchedule } from "~/model/posting-schedule";
+import { type PostingSchedule } from "~/model/posting-schedule";
 import ScheduleEditor from './schedule-editor';
 
 interface SettingsModalContentProps {

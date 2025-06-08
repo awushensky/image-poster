@@ -1,32 +1,17 @@
-import { requireUser } from "~/auth/session.server";
 import { thumbnailStorage } from "~/storage/image-storage.server";
 import type { Route } from "./+types/api.thumbnail";
-import { getImageQueueForUser, readImageQueueEntry } from "~/db/image-queue-database.server";
-import { readPostedImageEntries, readPostedImageEntry } from "~/db/posted-image-database.server";
-import type { User } from "~/model/model";
+import { readImageQueueEntry } from "~/db/image-queue-database.server";
+import { readPostedImageEntry } from "~/db/posted-image-database.server";
+import type { User } from "~/model/user";
 import type { ThumbnailBatchResult } from "~/api-interface/thumbnail";
 
 
 /**
  * Load multiple thumbnail images and return them as base64 encoded data
  */
-async function loadThumbnails(user: User, storageKeys: string[]): Promise<ThumbnailBatchResult> {
-  const queuedImageStorageKeys = (await getImageQueueForUser(user.did)).map(image => image.storageKey);
-  const postedImageStorageKeys = (await readPostedImageEntries(user.did)).map(image => image.storageKey);
-
+async function loadThumbnails(storageKeys: string[]): Promise<ThumbnailBatchResult> {
   const thumbnails = storageKeys.map(async storageKey => {
     try {
-      // ensure the user owns this image
-      if (!queuedImageStorageKeys.indexOf(storageKey) && !postedImageStorageKeys.indexOf(storageKey)) {
-        return {
-          storageKey,
-          data: '',
-          contentType: '',
-          size: 0,
-          error: 'Thumbnail not found'
-        }
-      }
-
       const thumbnailFile = await thumbnailStorage.get(storageKey);
       
       if (thumbnailFile) {
@@ -103,8 +88,6 @@ async function loadImage(user: User, storageKey: string): Promise<File> {
  */
 export async function action({ request }: Route.ActionArgs) {
   try {
-    const user = await requireUser(request);
-    
     const body = await request.json();
     const { storageKeys } = body;
     
@@ -124,7 +107,7 @@ export async function action({ request }: Route.ActionArgs) {
       }, { status: 400 });
     }
     
-    const result = await loadThumbnails(user, storageKeys);
+    const result = await loadThumbnails(storageKeys);
     return Response.json(result);
     
   } catch (error) {
@@ -142,7 +125,6 @@ export async function action({ request }: Route.ActionArgs) {
  */
 export async function loader({ request }: Route.LoaderArgs) {
   try {
-    const user = await requireUser(request);
     const url = new URL(request.url);
     const storageKey = url.searchParams.get('key');
     
@@ -154,7 +136,7 @@ export async function loader({ request }: Route.LoaderArgs) {
       }, { status: 400 });
     }
     
-    const result = await loadThumbnails(user, [storageKey]);
+    const result = await loadThumbnails([storageKey]);
     
     if (result.thumbnails.length > 0 && !result.thumbnails[0].error) {
       const thumbnail = result.thumbnails[0];

@@ -1,9 +1,10 @@
-import type { ProposedQueuedImage, QueuedImage } from "~/model/model";
+import type { ProposedQueuedImage, QueuedImage } from "~/model/queued-images";
 import type { ApiResult } from "./api";
-
 
 export interface QueuedImagesLoadResult extends ApiResult {
   images: QueuedImage[];
+  hasMore?: boolean;
+  nextCursor?: number;
 }
 
 export interface QueuedImageUpdateResult extends ApiResult { }
@@ -17,8 +18,19 @@ function parseQueuedImage(raw: any): QueuedImage {
   };
 }
 
-export async function fetchQueuedImages(): Promise<QueuedImage[]> {
-  const response = await fetch(`/api/image-queue`);
+// Updated to support pagination
+export async function fetchQueuedImages(limit: number = 50, cursor?: number): Promise<QueuedImagesLoadResult> {
+  const url = new URL('/api/image-queue', window.location.origin);
+  
+  if (limit !== 50) {
+    url.searchParams.set('limit', limit.toString());
+  }
+  
+  if (cursor !== undefined) {
+    url.searchParams.set('cursor', cursor.toString());
+  }
+  
+  const response = await fetch(url.toString());
   if (!response.ok) {
     throw new Error('Failed to fetch queued images');
   }
@@ -28,7 +40,17 @@ export async function fetchQueuedImages(): Promise<QueuedImage[]> {
     throw new Error(result.error || 'Failed to load queued images');
   }
 
-  return result.images.map(parseQueuedImage);
+  // Parse the images and return full result including pagination info
+  return {
+    ...result,
+    images: result.images.map(parseQueuedImage)
+  };
+}
+
+// Keep the old function for backward compatibility, but mark as deprecated
+export async function fetchAllQueuedImages(): Promise<QueuedImage[]> {
+  const result = await fetchQueuedImages(1000); // Large limit to get "all"
+  return result.images;
 }
 
 export async function updateQueuedImage(storageKey: string, update: Partial<ProposedQueuedImage>): Promise<void> {

@@ -1,4 +1,4 @@
-import type { ImageCounts } from "~/model/model";
+import type { ImageCounts } from "~/model/image-counts";
 import type { ApiResult } from "./api";
 
 

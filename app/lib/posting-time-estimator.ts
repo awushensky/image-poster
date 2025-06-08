@@ -1,4 +1,5 @@
-import type { PostingSchedule, QueuedImage } from "~/model/model";
+import type { PostingSchedule } from "~/model/posting-schedule";
+import type { QueuedImage } from "~/model/queued-images";
 import { getNextExecutionsForMultipleSchedules } from "./cron-utils";
 
 

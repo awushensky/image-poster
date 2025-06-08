@@ -3,15 +3,18 @@ import { deleteFromImageQueue, getImageQueueForUser, readImageQueueEntry, reorde
 import type { Route } from "./+types/api.image-queue";
 import type { QueuedImageDeleteResult, QueuedImagesLoadResult, QueuedImageUpdateResult } from "~/api-interface/image-queue";
 import { fileStorage, thumbnailStorage } from "~/storage/image-storage.server";
-import type { User } from "~/model/model";
 import type { ApiResult } from "~/api-interface/api";
+import type { User } from "~/model/user";
 
-
-async function loadImageQueue(userDid: string): Promise<QueuedImagesLoadResult> {
+async function loadImageQueue(userDid: string, limit: number = 50, cursor?: number): Promise<QueuedImagesLoadResult> {
+  const result = await getImageQueueForUser(userDid, limit, cursor);
+  
   return {
     status: 200,
     success: true,
-    images: await getImageQueueForUser(userDid),
+    images: result.images,
+    hasMore: result.hasMore,
+    nextCursor: result.nextCursor,
   };
 }
 
@@ -35,7 +38,6 @@ async function updateQueuedImage(user: User, storageKey: string, update: FormDat
 
     await reorderImageInQueue(user.did, storageKey, toOrder);
   }
-
 
   const postText = update.get("postText")?.toString();
   const isNsfwStr = update.get("isNsfw")?.toString()?.toLowerCase();
@@ -152,5 +154,14 @@ export async function action({ request, params }: Route.ActionArgs) {
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
-  return Response.json(await loadImageQueue(user.did));
+  const url = new URL(request.url);
+  
+  // Parse pagination parameters from query string
+  const limitParam = url.searchParams.get('limit');
+  const cursorParam = url.searchParams.get('cursor');
+  
+  const limit = limitParam ? Math.min(parseInt(limitParam), 100) : 50; // Max 100 per request
+  const cursor = cursorParam ? parseInt(cursorParam) : undefined;
+  
+  return Response.json(await loadImageQueue(user.did, limit, cursor));
 }

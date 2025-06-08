@@ -1,4 +1,5 @@
-import type { PostingSchedule, ProposedPostingSchedule } from "~/model/model";
+import type { ProposedPostingSchedule } from "~/model/posting-schedule";
+import type { PostingSchedule } from "~/model/posting-schedule";
 import { useDatabase } from "./database.server";
 import type { ColorType } from "~/lib/color-utils";
 

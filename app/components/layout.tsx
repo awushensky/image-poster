@@ -1,6 +1,6 @@
 import React from 'react';
 import Header from './header';
-import type { User } from '~/model/model';
+import type { User } from "~/model/user";
 
 
 interface LayoutProps {

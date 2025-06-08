@@ -1,7 +1,8 @@
 import { requireUser } from "~/auth/session.server";
 import type { Route } from "./+types/api.posting-schedules";
 import { updatePostingSchedules, getUserPostingSchedules } from "~/db/posting-schedule-database.server";
-import type { ProposedPostingSchedule, User } from "~/model/model";
+import type { User } from "~/model/user";
+import type { ProposedPostingSchedule } from "~/model/posting-schedule";
 import type { PostingScheduleGetResult } from "~/api-interface/posting-schedules";
 import type { PostingScheduleUpdateResult } from "~/api-interface/posting-schedules";
 
