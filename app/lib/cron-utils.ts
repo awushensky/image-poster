@@ -75,6 +75,9 @@ export function cronToDescription(cron: string): string {
   if (days.length === 2 && days.every(day => ['Saturday', 'Sunday'].includes(day))) {
     return `Weekends at ${time}`;
   }
+  if (days.length === 7 && days.every(day => DAY_NAMES.includes(day))) {
+    return `Daily at ${time}`;
+  }
   
   return `${days.join(', ')} at ${time}`;
 }
