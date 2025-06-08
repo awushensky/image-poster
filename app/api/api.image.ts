@@ -1,11 +1,10 @@
 import { fileStorage, thumbnailStorage } from "~/storage/image-storage.server";
 import type { Route } from "./+types/api.image";
 import { requireUser } from "~/auth/session.server";
-import { createImageQueueEntry, readImageQueueEntry } from "~/db/image-queue-database.server";
+import { createImageQueueEntry } from "~/db/image-queue-database.server";
 import type { User } from "~/model/user";
 import { FileUpload, parseFormData, type FileUploadHandler } from "@mjackson/form-data-parser";
 import { createHash } from "crypto";
-import { readPostedImageEntry } from "~/db/posted-image-database.server";
 import { bufferToFile, compressImage, createThumbnail, streamToBuffer } from "~/lib/image-utils";
 import type { ApiResult } from "~/api-interface/api";
 import type { ImageUploadResult } from "~/api-interface/image";
@@ -22,16 +21,7 @@ function fileNameToPostText(fileName: string): string {
  * @param storageKey the image storage key to load
  * @returns 
  */
-async function loadImage(user: User, storageKey: string): Promise<File> {
-  // ensure the user owns this image
-  const queuedImage = await readImageQueueEntry(user.did, storageKey);
-  const postedImage = await readPostedImageEntry(user.did, storageKey);
-  if (!queuedImage && !postedImage) {
-    throw new Response("Image not found", {
-      status: 404,
-    });
-  }
-
+async function loadImage(storageKey: string): Promise<File> {
   if (!storageKey) {
     throw new Response("Storage key is required", {
       status: 400,
@@ -109,7 +99,6 @@ async function uploadImage(user: User, request: Request): Promise<ImageUploadRes
 }
 
 export async function loader({ request, params }: Route.LoaderArgs) {
-  const user = await requireUser(request);
   const { storageKey } = params;
 
   const url = new URL(request.url);
@@ -119,7 +108,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     throw new Response("Storage key is required", { status: 400 });
   }
 
-  const imageFile = await loadImage(user, storageKey);
+  const imageFile = await loadImage(storageKey);
 
   const headers: Record<string, string> = {
     "Content-Type": imageFile.type,
