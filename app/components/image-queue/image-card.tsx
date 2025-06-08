@@ -100,14 +100,16 @@ const ImageCard: React.FC<ImageCardProps> = ({
           size="xl"
         >
           <div className="flex flex-col items-center">
-            <img
-              src={`/api/image/${image.storageKey}`}
-              alt={image.storageKey || 'Full size image'}
-              className="max-w-full max-h-[70vh] object-contain rounded-lg"
-              onError={(e) => {
-                e.currentTarget.src = thumbnailBlob;
-              }}
-            />
+            <div className="relative inline-block rounded-lg overflow-hidden checkerboard-bg">
+              <img
+                src={`/api/image/${image.storageKey}`}
+                alt={image.storageKey || 'Full size image'}
+                className="max-w-full max-h-[70vh] object-contain rounded-lg"
+                onError={(e) => {
+                  e.currentTarget.src = thumbnailBlob;
+                }}
+              />
+            </div>
             {image.postText && (
               <div className="mt-4 p-3 bg-gray-50 rounded-lg w-full">
                 <p className="text-sm text-gray-700 whitespace-pre-wrap">
