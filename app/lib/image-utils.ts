@@ -1,7 +1,6 @@
-import sharp from 'sharp';
+import sharp, { type Sharp } from 'sharp';
 import { Readable } from 'stream';
 import type { FileUpload } from '@mjackson/form-data-parser';
-
 
 export interface CompressionOptions {
   maxWidth?: number;
@@ -40,12 +39,73 @@ async function processSharpInstance(sharpInstance: sharp.Sharp): Promise<{
 }
 
 /**
+ * Apply format-specific compression settings
+ */
+function applyFormatCompression(
+  sharpInstance: sharp.Sharp, 
+  format: string, 
+  quality: number
+): sharp.Sharp {
+  switch (format) {
+    case 'jpeg':
+    case 'jpg':
+      return sharpInstance.jpeg({ quality, mozjpeg: true });
+    
+    case 'png':
+      return sharpInstance.png({ 
+        quality,
+        compressionLevel: 9,
+        palette: quality < 80, // Use palette for lower quality
+        colors: quality < 50 ? 64 : undefined
+      });
+    
+    case 'webp':
+      return sharpInstance.webp({ 
+        quality,
+        effort: 6, // Higher effort for better compression
+        lossless: false
+      });
+    
+    case 'gif':
+      // GIF compression is limited in Sharp, convert to PNG for better compression
+      return sharpInstance.png({ 
+        quality,
+        compressionLevel: 9,
+        palette: true,
+        colors: 256
+      });
+    
+    default:
+      // Fallback to JPEG for unsupported formats
+      return sharpInstance.jpeg({ quality, mozjpeg: true });
+  }
+}
+
+/**
+ * Determine the best fallback format for compression
+ */
+function getFallbackFormat(originalFormat: string, hasTransparency: boolean): string {
+  if (hasTransparency && ['png', 'webp', 'gif'].includes(originalFormat)) {
+    return 'png';
+  }
+  
+  if (['jpeg', 'jpg'].includes(originalFormat)) {
+    return 'jpeg';
+  }
+  
+  if (originalFormat === 'webp') {
+    return 'webp';
+  }
+  
+  return hasTransparency ? 'png' : 'jpeg';
+}
+
+/**
  * Convert a FileUpload or stream to buffer
  */
 export async function streamToBuffer(input: FileUpload | Readable): Promise<Buffer> {
   const chunks: Buffer[] = [];
   
-  // Handle FileUpload objects (which have a stream() method)
   if ('stream' in input && typeof input.stream === 'function') {
     const webStream = input.stream();
     const reader = webStream.getReader();
@@ -63,7 +123,6 @@ export async function streamToBuffer(input: FileUpload | Readable): Promise<Buff
     return Buffer.concat(chunks);
   }
   
-  // Handle Node.js Readable streams
   if (input instanceof Readable) {
     return new Promise((resolve, reject) => {
       input.on('data', (chunk) => chunks.push(chunk));
@@ -76,7 +135,7 @@ export async function streamToBuffer(input: FileUpload | Readable): Promise<Buff
 }
 
 /**
- * Compress an image to fit within size constraints while maintaining aspect ratio
+ * Compress an image to fit within size constraints while maintaining aspect ratio and format
  */
 export async function compressImage(
   inputBuffer: Buffer,
@@ -85,33 +144,55 @@ export async function compressImage(
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const { maxSizeKB, maxWidth, maxHeight, quality } = opts;
 
+  const originalMetadata = await getImageMetadata(inputBuffer);
+  const originalFormat = originalMetadata.format.toString() || 'jpeg';
+  const hasTransparency = await checkHasTransparency(inputBuffer);
+  
   let compressionQuality = quality;
+  let currentFormat = originalFormat;
   let result: { buffer: Buffer; width: number; height: number; size: number };
 
-  const originalMetadata = await getImageMetadata(inputBuffer);
-  
-  // Start with resizing to fit within dimensions
+  // Start with resizing to fit within dimensions using original format
   let sharpInstance = sharp(inputBuffer)
     .resize(maxWidth, maxHeight, {
       fit: 'inside',
       withoutEnlargement: true
-    })
-    .jpeg({ quality });
+    });
 
+  sharpInstance = applyFormatCompression(sharpInstance, currentFormat, compressionQuality);
   result = await processSharpInstance(sharpInstance);
   
   // If still too large, progressively reduce quality
-  while (result.size > maxSizeKB * 1024 && quality > 20) {
+  while (result.size > maxSizeKB * 1024 && compressionQuality > 20) {
     compressionQuality -= 10;
     
     sharpInstance = sharp(inputBuffer)
       .resize(maxWidth, maxHeight, {
         fit: 'inside',
         withoutEnlargement: true
-      })
-      .jpeg({ quality });
+      });
     
+    sharpInstance = applyFormatCompression(sharpInstance, currentFormat, compressionQuality);
     result = await processSharpInstance(sharpInstance);
+  }
+  
+  // If still too large, try switching to a more efficient format
+  if (result.size > maxSizeKB * 1024) {
+    const fallbackFormat = getFallbackFormat(originalFormat, hasTransparency);
+    
+    if (fallbackFormat !== currentFormat) {
+      currentFormat = fallbackFormat;
+      compressionQuality = Math.max(quality - 20, 60); // Reset quality but lower
+      
+      sharpInstance = sharp(inputBuffer)
+        .resize(maxWidth, maxHeight, {
+          fit: 'inside',
+          withoutEnlargement: true
+        });
+      
+      sharpInstance = applyFormatCompression(sharpInstance, currentFormat, compressionQuality);
+      result = await processSharpInstance(sharpInstance);
+    }
   }
   
   // If still too large, reduce dimensions
@@ -124,9 +205,9 @@ export async function compressImage(
         .resize(currentMaxWidth, currentMaxHeight, {
           fit: 'inside',
           withoutEnlargement: true
-        })
-        .jpeg({ quality: Math.max(quality, 60) });
+        });
       
+      sharpInstance = applyFormatCompression(sharpInstance, currentFormat, Math.max(compressionQuality, 60));
       result = await processSharpInstance(sharpInstance);
       
       currentMaxWidth = Math.floor(currentMaxWidth * 0.9);
@@ -134,7 +215,42 @@ export async function compressImage(
     }
   }
   
+  // Final fallback: if still too large and we haven't tried JPEG, convert to JPEG
+  if (result.size > maxSizeKB * 1024 && currentFormat !== 'jpeg') {
+    sharpInstance = sharp(inputBuffer)
+      .resize(Math.floor(maxWidth * 0.6), Math.floor(maxHeight * 0.6), {
+        fit: 'inside',
+        withoutEnlargement: true
+      })
+      .jpeg({ quality: 60, mozjpeg: true });
+    
+    result = await processSharpInstance(sharpInstance);
+  }
+  
   return result.buffer;
+}
+
+/**
+ * Check if an image has transparency
+ */
+async function checkHasTransparency(inputBuffer: Buffer): Promise<boolean> {
+  try {
+    const metadata = await sharp(inputBuffer).metadata();
+    
+    // PNG and WebP can have transparency
+    if (metadata.format === 'png' || metadata.format === 'webp') {
+      return metadata.hasAlpha || false;
+    }
+    
+    // GIF can have transparency
+    if (metadata.format === 'gif') {
+      return true; // Assume GIF might have transparency
+    }
+    
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -144,20 +260,46 @@ export async function createThumbnail(
   inputBuffer: Buffer,
   size: number = 150
 ): Promise<Buffer> {
-  return await sharp(inputBuffer)
+  const originalMetadata = await getImageMetadata(inputBuffer);
+  const hasTransparency = await checkHasTransparency(inputBuffer);
+  
+  let sharpInstance = sharp(inputBuffer)
     .resize(size, size, {
       fit: 'cover',
       position: 'center'
-    })
-    .toBuffer();
+    });
+  
+  if (hasTransparency && ['png', 'webp', 'gif'].includes(originalMetadata.format || '')) {
+    sharpInstance = sharpInstance.png({ quality: 80 });
+  } else {
+    sharpInstance = sharpInstance.jpeg({ quality: 80 });
+  }
+  
+  return await sharpInstance.toBuffer();
 }
 
 /**
  * Convert a buffer to a file
  */
-export async function bufferToFile(image: Buffer, fileName: string) {
+export async function bufferToFile(image: Buffer, fileName: string): Promise<File> {
   const metadata = await getImageMetadata(image);
-  return new File([image.buffer], fileName, { type: `image/${metadata.format}` });
+  const mimeType = getMimeType(metadata.format || 'jpeg');
+  return new File([image], fileName, { type: mimeType });
+}
+
+/**
+ * Get MIME type for format
+ */
+function getMimeType(format: string): string {
+  const mimeTypes: Record<string, string> = {
+    'jpeg': 'image/jpeg',
+    'jpg': 'image/jpeg',
+    'png': 'image/png',
+    'webp': 'image/webp',
+    'gif': 'image/gif'
+  };
+  
+  return mimeTypes[format] || 'image/jpeg';
 }
 
 /**
@@ -171,6 +313,7 @@ export async function getImageMetadata(input: Buffer) {
     height: metadata.height || 0,
     format: metadata.format,
     size: input.length,
-    sizeKB: Math.round(input.length / 1024 * 100) / 100
+    sizeKB: Math.round(input.length / 1024 * 100) / 100,
+    hasAlpha: metadata.hasAlpha || false
   };
 }

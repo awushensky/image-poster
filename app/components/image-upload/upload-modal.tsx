@@ -30,7 +30,7 @@ export default function UploadModal({ onComplete, onCancel }: UploadModalProps) 
     ));
 
     try {
-      uploadImage(file);
+      await uploadImage(file);
       setUploads(prev => prev.map((upload, i) => 
         i === index 
           ? { ...upload, progress: 100, status: 'completed' }

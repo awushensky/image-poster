@@ -58,7 +58,7 @@ export async function updateQueuedImage(storageKey: string, update: Partial<Prop
 }
 
 export async function deleteQueuedImage(storageKey: string): Promise<void> {
-  const response = await fetch(`/api/image/${storageKey}`, {
+  const response = await fetch(`/api/image-queue/${storageKey}`, {
     method: 'DELETE',
   });
 
