@@ -22,32 +22,32 @@ const PostedImageCard: React.FC<PostedImageCardProps> = ({ image, thumbnailBlob 
   
   return (
     <>
-      <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-4">
           <div className="flex-shrink-0">
             <img
               src={thumbnailBlob}
               alt={image.storageKey || 'Posted image'}
               onClick={handleImageClick}
-              className="w-20 h-20 object-cover rounded-lg border border-gray-300 cursor-pointer hover:opacity-80 transition-opacity"
+              className="w-20 h-20 object-cover rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer hover:opacity-80 transition-opacity"
               loading="lazy"
             />
           </div>
 
           <div className="flex-1 space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Post Text
               </label>
-              <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 min-h-[2.5rem] text-sm text-gray-700">
+              <div className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 min-h-[2.5rem] text-sm text-gray-700 dark:text-gray-300">
                 {image.postText || (
-                  <span className="text-gray-400 italic">No post text</span>
+                  <span className="text-gray-400 dark:text-gray-500 italic">No post text</span>
                 )}
               </div>
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="flex items-center text-sm text-gray-600">
+              <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                 <Calendar className="w-4 h-4 mr-1" />
                 <span title={image.createdAt.toLocaleString()}>
                   Posted {formatRelativeTime(image.createdAt)}
@@ -56,17 +56,17 @@ const PostedImageCard: React.FC<PostedImageCardProps> = ({ image, thumbnailBlob 
 
               <div className="flex items-center gap-3">
                 {image.isNsfw ? (
-                  <div className="flex items-center text-sm text-gray-500">
+                  <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                     <span>NSFW</span>
                   </div>
                 ) : (
-                  <div className="flex items-center text-sm text-amber-600">
+                  <div className="flex items-center text-sm text-amber-600 dark:text-amber-400">
                     <AlertTriangle className="w-4 h-4 mr-1" />
                     <span>Not Marked NSFW</span>
                   </div>
                 )}
                 
-                <div className="flex items-center text-sm text-green-600">
+                <div className="flex items-center text-sm text-green-600 dark:text-green-400">
                   <CheckCircle className="w-4 h-4 mr-1" />
                   <span>Posted</span>
                 </div>
@@ -93,8 +93,8 @@ const PostedImageCard: React.FC<PostedImageCardProps> = ({ image, thumbnailBlob 
               }}
             />
             {image.postText && (
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg w-full">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">
+              <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg w-full">
+                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                   {image.postText}
                 </p>
               </div>

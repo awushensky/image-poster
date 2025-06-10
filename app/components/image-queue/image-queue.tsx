@@ -12,7 +12,6 @@ import { deleteQueuedImage, fetchQueuedImages, updateQueuedImage } from "~/api-i
 import { fetchThumbnails } from "~/api-interface/thumbnail";
 import { type ThumbnailData } from "~/api-interface/thumbnail";
 
-
 interface ImageQueueProps {
   schedules: PostingSchedule[];
   userTimezone: string;
@@ -154,7 +153,7 @@ const ImageQueue = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen relative">
+    <div className="max-w-4xl mx-auto p-6 bg-gray-50 dark:bg-gray-900 min-h-screen relative">
       {editingImageKey && editingImage && (
         <Modal
           onClose={handleEditClose}
@@ -170,7 +169,7 @@ const ImageQueue = ({
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
           <div className="text-lg font-medium mb-2">Loading images...</div>
         </div>
       ) : (
@@ -191,9 +190,8 @@ const ImageQueue = ({
               `}
             >
 
-              {/* Drag handle overlay */}
-              <div className="absolute top-2 right-2 z-10 p-2 bg-white bg-opacity-80 rounded-md shadow-sm">
-                <GripVertical className="w-5 h-5 text-gray-400 cursor-grab active:cursor-grabbing" />
+              <div className="absolute top-2 right-2 z-10 p-2 bg-white dark:bg-gray-800 bg-opacity-80 dark:bg-opacity-80 rounded-md shadow-sm">
+                <GripVertical className="w-5 h-5 text-gray-400 dark:text-gray-500 cursor-grab active:cursor-grabbing" />
               </div>
 
               <ImageCard
@@ -206,7 +204,7 @@ const ImageQueue = ({
           ))}
 
           {images.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
               <div className="text-lg font-medium mb-2">No images uploaded yet</div>
               <div className="text-sm">Upload some images to get started!</div>
             </div>

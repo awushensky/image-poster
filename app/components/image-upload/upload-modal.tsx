@@ -3,7 +3,6 @@ import Modal from "~/components/modal";
 import ImageUploadTarget from "./image-upload-target";
 import { uploadImage } from "~/api-interface/image";
 
-
 interface UploadProgress {
   file: File;
   progress: number;
@@ -105,36 +104,36 @@ export default function UploadModal({ onComplete, onCancel }: UploadModalProps) 
 
       {uploads.length > 0 && (
         <div className="space-y-3">
-          <h3 className="font-medium text-sm text-gray-700">
+          <h3 className="font-medium text-sm text-gray-700 dark:text-gray-300">
             Upload Progress ({completedCount}/{uploads.length})
           </h3>
           
           <div className="max-h-40 overflow-y-auto space-y-2">
             {uploads.map((upload, index) => (
-              <div key={index} className="flex items-center space-x-3 p-2 bg-gray-50 rounded text-sm">
-                <span className="truncate flex-1" title={upload.file.name}>
+              <div key={index} className="flex items-center space-x-3 p-2 bg-gray-50 dark:bg-gray-700 rounded text-sm">
+                <span className="truncate flex-1 text-gray-900 dark:text-gray-100" title={upload.file.name}>
                   {upload.file.name}
                 </span>
                 
                 {upload.status === 'pending' && (
-                  <span className="text-xs text-gray-500">Waiting...</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Waiting...</span>
                 )}
                 
                 {upload.status === 'uploading' && (
                   <div className="flex items-center space-x-2">
-                    <div className="w-12 h-1.5 bg-gray-200 rounded">
-                      <div className="h-full bg-blue-500 rounded animate-pulse" />
+                    <div className="w-12 h-1.5 bg-gray-200 dark:bg-gray-600 rounded">
+                      <div className="h-full bg-blue-500 dark:bg-blue-400 rounded animate-pulse" />
                     </div>
-                    <span className="text-xs text-gray-500">Uploading...</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Uploading...</span>
                   </div>
                 )}
                 
                 {upload.status === 'completed' && (
-                  <span className="text-xs text-green-600 font-medium">✓ Complete</span>
+                  <span className="text-xs text-green-600 dark:text-green-400 font-medium">✓ Complete</span>
                 )}
                 
                 {upload.status === 'error' && (
-                  <span className="text-xs text-red-600 font-medium" title={upload.error}>
+                  <span className="text-xs text-red-600 dark:text-red-400 font-medium" title={upload.error}>
                     ✗ Failed: {upload.error}
                   </span>
                 )}
@@ -143,7 +142,7 @@ export default function UploadModal({ onComplete, onCancel }: UploadModalProps) 
           </div>
           
           {hasErrors && allCompleted && (
-            <div className="text-center text-amber-600 text-sm">
+            <div className="text-center text-amber-600 dark:text-amber-400 text-sm">
               Some uploads failed. You can close this dialog and try again.
             </div>
           )}
@@ -155,7 +154,7 @@ export default function UploadModal({ onComplete, onCancel }: UploadModalProps) 
         {!hasStarted && (
           <button
             onClick={onCancel}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800"
+            className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
           >
             Cancel
           </button>
@@ -164,7 +163,7 @@ export default function UploadModal({ onComplete, onCancel }: UploadModalProps) 
         {allCompleted && (
           <button
             onClick={onComplete}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-600"
           >
             Done
           </button>

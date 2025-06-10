@@ -1,7 +1,7 @@
 import React from 'react';
 import Header from './header';
 import type { User } from "~/model/user";
-
+import { cn, themeClasses } from "~/utils/theme";
 
 interface LayoutProps {
   user: User;
@@ -15,12 +15,15 @@ export default function Layout({
   children,
 }: LayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={cn(
+      "min-h-screen",
+      themeClasses.surface
+    )}>
       <Header 
         user={user}
         onLogoutClick={onLogoutClick}
       />
-      <main className={`max-w-7xl mx-auto p-6`}>
+      <main className="max-w-7xl mx-auto p-6">
         {children}
       </main>
     </div>

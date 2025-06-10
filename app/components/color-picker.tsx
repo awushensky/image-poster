@@ -2,7 +2,6 @@ import { Palette } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { COLORS, type ColorType } from "~/lib/color-utils";
 
-
 interface ColorPickerProps {
   currentColor: ColorType;
   active: boolean;
@@ -34,7 +33,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({ currentColor, active, 
   };
 
   const getButtonColor = (): string => {
-    return active ? `text-${currentColor}-600 hover:text-gray-600` : `text-gray-400 hover:text-${currentColor}-900`;
+    return active ? `text-${currentColor}-600 dark:text-${currentColor}-400 hover:text-gray-600 dark:hover:text-gray-400` : `text-gray-400 dark:text-gray-500 hover:text-${currentColor}-900 dark:hover:text-${currentColor}-300`;
   };
 
   return (
@@ -49,7 +48,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({ currentColor, active, 
       </button>
       
       {isOpen && (
-        <div className="absolute top-8 right-0 z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-3">
+        <div className="absolute top-8 right-0 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3">
           <div className="grid grid-cols-4 gap-2 w-32">
             {COLORS.map((color) => (
               <button
@@ -57,8 +56,8 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({ currentColor, active, 
                 onClick={() => handleColorSelect(color)}
                 className={`w-6 h-6 rounded-full border-2 transition-all hover:scale-110 bg-${color}-500 ${
                   currentColor === color 
-                    ? 'border-gray-800 ring-2 ring-gray-300' 
-                    : 'border-white hover:border-gray-300'
+                    ? 'border-gray-800 dark:border-gray-200 ring-2 ring-gray-300 dark:ring-gray-600' 
+                    : 'border-white dark:border-gray-300 hover:border-gray-300 dark:hover:border-gray-500'
                 }`}
                 title={`Change to ${color}`}
               />

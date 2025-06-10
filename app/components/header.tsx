@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User as UserIcon, LogOut } from 'lucide-react';
 import type { User } from "~/model/user";
-
+import { cn, themeClasses } from '~/utils/theme';
 
 interface HeaderProps {
   user: User;
@@ -17,10 +17,17 @@ export default function Header({ user, onLogoutClick }: HeaderProps) {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4">
+    <header className={cn(
+      "bg-white dark:bg-gray-900 px-6 py-4",
+      "border-b",
+      themeClasses.border
+    )}>
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <h1 className="text-xl font-semibold text-gray-900">
+          <h1 className={cn(
+            "text-xl font-semibold",
+            themeClasses.primary
+          )}>
             Bluesky Image Scheduler
           </h1>
         </div>
@@ -29,7 +36,10 @@ export default function Header({ user, onLogoutClick }: HeaderProps) {
           <div className="relative">
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className={cn(
+                "flex items-center space-x-2 p-2 rounded-lg transition-colors",
+                "hover:bg-gray-100 dark:hover:bg-gray-800"
+              )}
             >
               {user.avatarUrl
                 ? <img
@@ -37,9 +47,15 @@ export default function Header({ user, onLogoutClick }: HeaderProps) {
                     alt={user.displayName || user.handle}
                     className="w-8 h-8 rounded-full"
                   />
-                : <UserIcon className="w-8 h-8 text-gray-500" />
+                : <UserIcon className={cn(
+                    "w-8 h-8",
+                    themeClasses.muted
+                  )} />
               }
-              <span className="text-sm text-gray-700 hidden sm:block">
+              <span className={cn(
+                "text-sm hidden sm:block",
+                themeClasses.secondary
+              )}>
                 {user.displayName || user.handle}
               </span>
             </button>
@@ -51,10 +67,19 @@ export default function Header({ user, onLogoutClick }: HeaderProps) {
                   onClick={() => setDropdownOpen(false)}
                 />
                 
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                <div className={cn(
+                  "absolute right-0 mt-2 w-48 rounded-lg shadow-lg py-1 z-50",
+                  "bg-white dark:bg-gray-800",
+                  "border",
+                  themeClasses.border
+                )}>
                   <button
                     onClick={handleLogout}
-                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                    className={cn(
+                      "flex items-center w-full px-4 py-2 text-sm transition-colors",
+                      "text-gray-700 dark:text-gray-300",
+                      "hover:bg-gray-100 dark:hover:bg-gray-700"
+                    )}
                   >
                     <LogOut className="w-4 h-4 mr-3" />
                     Log Out

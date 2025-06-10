@@ -2,6 +2,7 @@ import { redirect } from 'react-router';
 import { handleAuthCallback } from '~/auth/bluesky-auth.server';
 import { createUserSession } from '~/auth/session.server';
 import type { Route } from './+types/auth.callback';
+import { cn, themeClasses } from '~/utils/theme';
 
 export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
@@ -52,22 +53,82 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export default function AuthCallback() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center space-y-4">
+    <div className={cn(
+      "min-h-screen flex items-center justify-center",
+      themeClasses.surface
+    )}>
+      <div className={cn(
+        "text-center space-y-6 p-8 rounded-lg max-w-md mx-4",
+        themeClasses.card,
+        "shadow-lg border",
+        themeClasses.border
+      )}>
         {/* Loading spinner */}
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <div className="flex justify-center">
+          <div className={cn(
+            "animate-spin rounded-full h-12 w-12 border-4 border-transparent",
+            "border-t-blue-600 dark:border-t-blue-400",
+            "border-r-blue-600 dark:border-r-blue-400"
+          )} 
+          role="status" 
+          aria-label="Loading">
+            <span className="sr-only">Loading...</span>
+          </div>
+        </div>
         
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+        <div className="space-y-3">
+          <h2 className={cn(
+            "text-xl font-semibold",
+            themeClasses.primary
+          )}>
             Completing sign in...
           </h2>
-          <p className="text-gray-600">
+          <p className={themeClasses.secondary}>
             Please wait while we finish setting up your account.
           </p>
         </div>
         
-        <div className="text-sm text-gray-500">
-          <p>If this takes more than a few seconds, please try refreshing the page.</p>
+        {/* Progress indicator */}
+        <div className="space-y-3">
+          <div className={cn(
+            "w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden"
+          )}>
+            <div className={cn(
+              "h-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-pulse",
+              "w-3/4 transition-all duration-1000"
+            )}></div>
+          </div>
+          
+          <div className={cn(
+            "text-sm",
+            themeClasses.muted
+          )}>
+            <p>If this takes more than a few seconds, please try refreshing the page.</p>
+          </div>
+        </div>
+
+        {/* Authentication steps indicator */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-center space-x-2">
+            {/* Step indicators */}
+            <div className={cn(
+              "w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse"
+            )}></div>
+            <div className={cn(
+              "w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse",
+              "animation-delay-300"
+            )}></div>
+            <div className={cn(
+              "w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse",
+              "animation-delay-600"
+            )}></div>
+          </div>
+          <p className={cn(
+            "text-xs",
+            themeClasses.muted
+          )}>
+            Verifying with Bluesky...
+          </p>
         </div>
       </div>
     </div>

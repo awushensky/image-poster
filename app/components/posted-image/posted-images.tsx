@@ -44,10 +44,10 @@ const PostedImages: React.FC<PostedImagesProps> = ({ isVisible, onChanged, onErr
 
   if (isLoading || images === undefined) {
     return (
-      <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
+      <div className="max-w-4xl mx-auto p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-600">Loading posted images...</span>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
+          <span className="ml-3 text-gray-600 dark:text-gray-400">Loading posted images...</span>
         </div>
       </div>
     );
@@ -56,7 +56,7 @@ const PostedImages: React.FC<PostedImagesProps> = ({ isVisible, onChanged, onErr
   const postedItems = [...images].map((image, index) => ({image: image, thumbnail: thumbnails[index]}));
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
+    <div className="max-w-4xl mx-auto p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="space-y-4">
         {postedItems.map((postedItem) => (
           <PostedImageCard
@@ -67,7 +67,7 @@ const PostedImages: React.FC<PostedImagesProps> = ({ isVisible, onChanged, onErr
         ))}
 
         {postedItems.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
             <div className="text-lg font-medium mb-2">No images posted yet</div>
             <div className="text-sm">Images will appear here once they've been posted to Bluesky</div>
           </div>
