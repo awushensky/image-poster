@@ -1,32 +1,14 @@
-import { requireUser } from "~/auth/session.server";
-import { thumbnailStorage } from "~/storage/image-storage.server";
 import type { Route } from "./+types/api.thumbnail";
-import { getImageQueueForUser, readImageQueueEntry } from "~/db/image-queue-database.server";
-import { readPostedImageEntries, readPostedImageEntry } from "~/db/posted-image-database.server";
-import type { User } from "~/model/user";
 import type { ThumbnailBatchResult } from "~/api-interface/thumbnail";
-
 
 /**
  * Load multiple thumbnail images and return them as base64 encoded data
  */
-async function loadThumbnails(user: User, storageKeys: string[]): Promise<ThumbnailBatchResult> {
-  const queuedImageStorageKeys = (await getImageQueueForUser(user.did)).map(image => image.storageKey);
-  const postedImageStorageKeys = (await readPostedImageEntries(user.did)).map(image => image.storageKey);
+async function loadThumbnails(storageKeys: string[]): Promise<ThumbnailBatchResult> {
+  const { thumbnailStorage } = await import("~/storage/image-storage.server");
 
   const thumbnails = storageKeys.map(async storageKey => {
     try {
-      // ensure the user owns this image
-      if (!queuedImageStorageKeys.indexOf(storageKey) && !postedImageStorageKeys.indexOf(storageKey)) {
-        return {
-          storageKey,
-          data: '',
-          contentType: '',
-          size: 0,
-          error: 'Thumbnail not found'
-        }
-      }
-
       const thumbnailFile = await thumbnailStorage.get(storageKey);
       
       if (thumbnailFile) {
@@ -68,43 +50,10 @@ async function loadThumbnails(user: User, storageKeys: string[]): Promise<Thumbn
 }
 
 /**
- * Load a thumbnail as a stream. This can be used in the `src` field of an <img> tag.
- * @param storageKey the thumbnail storage key to load
- * @returns 
- */
-async function loadImage(user: User, storageKey: string): Promise<File> {
-  // ensure the user owns this image
-  const queuedImage = await readImageQueueEntry(user.did, storageKey);
-  const postedImage = await readPostedImageEntry(user.did, storageKey);
-  if (!queuedImage && !postedImage) {
-    throw new Response("Image not found", {
-      status: 404,
-    });
-  }
-
-  if (!storageKey) {
-    throw new Response("Storage key is required", {
-      status: 400,
-    });
-  }
-
-  const file = await thumbnailStorage.get(storageKey);
-  if (!file) {
-    throw new Response("Image not found", {
-      status: 404,
-    });
-  }
-
-  return file;
-}
-
-/**
  * POST endpoint that accepts a list of storage keys and returns thumbnail data
  */
 export async function action({ request }: Route.ActionArgs) {
   try {
-    const user = await requireUser(request);
-    
     const body = await request.json();
     const { storageKeys } = body;
     
@@ -124,7 +73,7 @@ export async function action({ request }: Route.ActionArgs) {
       }, { status: 400 });
     }
     
-    const result = await loadThumbnails(user, storageKeys);
+    const result = await loadThumbnails(storageKeys);
     return Response.json(result);
     
   } catch (error) {
@@ -142,7 +91,6 @@ export async function action({ request }: Route.ActionArgs) {
  */
 export async function loader({ request }: Route.LoaderArgs) {
   try {
-    const user = await requireUser(request);
     const url = new URL(request.url);
     const storageKey = url.searchParams.get('key');
     
@@ -154,7 +102,7 @@ export async function loader({ request }: Route.LoaderArgs) {
       }, { status: 400 });
     }
     
-    const result = await loadThumbnails(user, [storageKey]);
+    const result = await loadThumbnails([storageKey]);
     
     if (result.thumbnails.length > 0 && !result.thumbnails[0].error) {
       const thumbnail = result.thumbnails[0];
