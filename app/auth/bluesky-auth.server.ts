@@ -7,6 +7,7 @@ import { deleteOAuthSession, getOAuthSession, storeOAuthSession } from '~/db/oau
 import { getMutex } from '../lib/mutex';
 import { deleteUserSession } from '~/db/user-session-database.server';
 import { getImageMetadata } from '~/lib/image-utils';
+import { isAllowedUser } from './allowed_users';
 
 
 let oauthClient: NodeOAuthClient;
@@ -113,9 +114,6 @@ function setupOAuthEventListeners(client: NodeOAuthClient) {
     } catch (error) {
       console.error(`Failed to clean up deleted session ${sub}:`, error);
     }
-    
-    // Optionally, mark the user as needing re-authentication in your user database
-    // await markUserForReauth(sub);
   });
 }
 
@@ -159,6 +157,12 @@ export async function handleAuthCallback(params: URLSearchParams) {
   const profile = await agent.getProfile({ actor: session.sub });
   if (!profile.success) {
     throw new Error('Failed to get user profile');
+  }
+
+  if (!isAllowedUser(profile.data.did)) {
+    await deleteOAuthSession(profile.data.did);
+    await deleteUserSession(profile.data.did);
+    throw new Error('User authentication failure');
   }
 
   const user = await createOrUpdateUser(
