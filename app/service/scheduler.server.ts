@@ -36,12 +36,12 @@ class ImageScheduler {
     this.lastGlobalCheck = new Date();
     console.log('Starting image posting scheduler...');
     
-    // Check every 30 seconds for better responsiveness
+    // Check every 5 minutes for better responsiveness
     this.intervalId = setInterval(() => {
       this.checkSchedules().catch(error => {
         console.error('Error in scheduler:', error);
       });
-    }, 30 * 1000);
+    }, 60 * 1000 * 5);
 
     // Run once immediately
     this.checkSchedules().catch(error => {
@@ -59,7 +59,6 @@ class ImageScheduler {
   }
 
   private async checkSchedules() {
-    console.log("Checking for and posting images");
     const checkStartTime = new Date();
     
     const activeSchedules = await getAllActivePostingSchedulesWithTimezone();
@@ -67,11 +66,9 @@ class ImageScheduler {
       this.shouldTriggerSchedule(schedule, this.lastGlobalCheck, checkStartTime)
     );
     
-    console.log(`Image poster is about to post ${untriggeredSchedules.length} images...`);
     for (const schedule of untriggeredSchedules) {
       await this.processScheduleTrigger(schedule);
     }
-    console.log("Done posting images!");
     
     this.lastGlobalCheck = checkStartTime;
   }
