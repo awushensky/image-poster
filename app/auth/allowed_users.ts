@@ -1,9 +1,23 @@
-const allowedUserDids = [
-  "did:plc:i63andemyk4z7xv6x7yi4a6l", // flora
-  "did:plc:z3charo64t4vybtuaf4psipi", // lumin test
-  "did:plc:i63andemyk4z7xv6x7yi4a6l", // king
-];
+import fs from 'fs';
+
+interface Config {
+  allowedUsers: AllowedUser[];
+}
+
+interface AllowedUser {
+  did: string;
+  name: string;
+}
+
+const configPath = '/config/config.json';
 
 export function isAllowedUser(userDid: string): boolean {
-  return !!allowedUserDids.find(did => did === userDid);
+  try {
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8')) as Config;
+    const allowedUserDids = config.allowedUsers.map(user => user.did);
+    return !!allowedUserDids.find(did => did === userDid);
+  } catch (error) {
+    console.error('Could not load allowed users config. Please add some users to enable this app.');
+    return false;
+  }
 }
