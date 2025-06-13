@@ -3,6 +3,12 @@ An application to post images to bluesky on a regular cadence.
 
 This is a personal project I built for my friend and to learn react-router, so there's not a lot of documentation.
 
+## Configuration
+You'll need to set up a `config.json` file and map it to `/config`. See the example_config.json file in this repository as an example.
+
+Note that in order for bsky oauth to work, bluesky must be able to contact this server to read the `jwks.json` and `client-metadata.json` routes, so this has to be publicly accessible at the `BASE_URL`.
+
+## Building
 To run this, you can build it using docker. Here's an example docker-commpose configuration
 ```
   image-poster:
@@ -37,8 +43,7 @@ Or if you want to run in development mode with hot reloading, use a configuratio
   image-poster:
     build:
       context: ~/src/image-poster
-      #target: development
-      target: production
+      target: development
     container_name: image-poster
     user: 1000:1000
     restart: unless-stopped

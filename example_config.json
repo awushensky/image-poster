@@ -1,0 +1,12 @@
+{
+    "allowedUsers": [
+        {
+            "did": "<bluesky_did>",
+            "name": "user 1"
+        },
+        {
+            "did": "<bluesky_did>",
+            "name": "user 2"
+        }
+    ]
+}

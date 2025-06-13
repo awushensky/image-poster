@@ -34,7 +34,7 @@ async function initOAuthClient() {
   oauthClient = new NodeOAuthClient({
     clientMetadata: {
       client_id: `${baseUrl}/client-metadata.json`,
-      client_name: 'LuminBlaz\'s Automatic Image Poster',
+      client_name: 'Bluesky Scheduled Image Poster',
       client_uri: baseUrl,
       redirect_uris: [`${baseUrl}/auth/callback`],
       scope: 'atproto transition:generic',
