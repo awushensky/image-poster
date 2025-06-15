@@ -10,6 +10,11 @@ import type { User } from "~/model/user";
 
 const sessionTTLSeconds = 60 * 60 * 24 * 365; // 1 year in seconds
 const sessionIdCookieName = '__sessionId';
+const sessionSecret = process.env.SESSION_SECRET;
+
+if (!sessionSecret) {
+  throw new Error("Session secret was not specified. Please specify the SESSION_SECRET env");
+}
 
 const sessionStorage = createCookieSessionStorage({
   cookie: {
@@ -18,7 +23,7 @@ const sessionStorage = createCookieSessionStorage({
     maxAge: sessionTTLSeconds,
     path: '/',
     sameSite: 'lax',
-    secrets: [process.env.SESSION_SECRET || 'your-secret-key'],    // TODO: set up environment variables
+    secrets: [sessionSecret],
     secure: process.env.NODE_ENV === 'production',
   },
 });

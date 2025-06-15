@@ -23,6 +23,7 @@
     "@react-router/serve": "^7.5.3",
     "async-mutex": "^0.5.0",
     "cron-parser": "^5.2.0",
+    "file-type": "^21.0.0",
     "isbot": "^5.1.27",
     "lucide-react": "^0.511.0",
     "react": "^19.1.0",

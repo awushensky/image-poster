@@ -1,6 +1,16 @@
-import sharp, { type Sharp } from 'sharp';
+import sharp from 'sharp';
 import { Readable } from 'stream';
 import type { FileUpload } from '@mjackson/form-data-parser';
+
+const MAX_FILE_SIZE = 15 * 1024 * 1024; // 10MB
+
+export const ALLOWED_IMAGE_MIME_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/gif',
+  'image/webp',
+];
 
 export interface CompressionOptions {
   maxWidth?: number;
@@ -100,35 +110,56 @@ function getFallbackFormat(originalFormat: string, hasTransparency: boolean): st
   return hasTransparency ? 'png' : 'jpeg';
 }
 
+async function readStreamToBufffer(stream: ReadableStream, maxSizeBytes: number): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  const reader = stream.getReader();
+  let totalSize = 0;
+  
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = Buffer.from(value);
+      totalSize += chunk.length;
+      if (totalSize > maxSizeBytes) {
+        throw new Error(`File too large. Maximum allowed size is ${maxSizeBytes / 1024 / 1024}MB`);
+      }
+      chunks.push(chunk);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  
+  return Buffer.concat(chunks);
+}
+
+async function readReadableToBuffer(readable: Readable, maxSizeBytes: number): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  let totalSize = 0;
+
+  return new Promise((resolve, reject) => {
+    readable.on('data', (chunk) => {
+      totalSize += chunk.length;
+      if (totalSize > maxSizeBytes) {
+        throw new Error(`File too large. Maximum allowed size is ${maxSizeBytes / 1024 / 1024}MB`);
+      }
+      chunks.push(chunk);
+    });
+    readable.on('error', reject);
+    readable.on('end', () => resolve(Buffer.concat(chunks)));
+  });
+}
+
 /**
  * Convert a FileUpload or stream to buffer
  */
-export async function streamToBuffer(input: FileUpload | Readable): Promise<Buffer> {
-  const chunks: Buffer[] = [];
-  
+export async function streamToBuffer(input: FileUpload | Readable, maxSizeBytes: number = MAX_FILE_SIZE): Promise<Buffer> {
   if ('stream' in input && typeof input.stream === 'function') {
-    const webStream = input.stream();
-    const reader = webStream.getReader();
-    
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(Buffer.from(value));
-      }
-    } finally {
-      reader.releaseLock();
-    }
-    
-    return Buffer.concat(chunks);
+    return await readStreamToBufffer(input.stream(), maxSizeBytes);
   }
   
   if (input instanceof Readable) {
-    return new Promise((resolve, reject) => {
-      input.on('data', (chunk) => chunks.push(chunk));
-      input.on('error', reject);
-      input.on('end', () => resolve(Buffer.concat(chunks)));
-    });
+    return await readReadableToBuffer(input, maxSizeBytes);
   }
   
   throw new Error('Unsupported input type for stream conversion');

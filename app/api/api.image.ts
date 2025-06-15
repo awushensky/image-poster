@@ -5,9 +5,10 @@ import { createImageQueueEntry } from "~/db/image-queue-database.server";
 import type { User } from "~/model/user";
 import { FileUpload, parseFormData, type FileUploadHandler } from "@mjackson/form-data-parser";
 import { createHash } from "crypto";
-import { bufferToFile, compressImage, createThumbnail, streamToBuffer } from "~/lib/image-utils";
+import { ALLOWED_IMAGE_MIME_TYPES, bufferToFile, compressImage, createThumbnail, streamToBuffer } from "~/lib/image-utils";
 import type { ApiResult } from "~/api-interface/api";
 import type { ImageUploadResult } from "~/api-interface/image";
+import { fileTypeFromBuffer } from 'file-type';
 
 
 function fileNameToPostText(fileName: string): string {
@@ -61,6 +62,11 @@ async function uploadImage(user: User, request: Request): Promise<ImageUploadRes
         const inputBuffer = await streamToBuffer(fileUpload);
         const thumbnailImage = await bufferToFile(await createThumbnail(inputBuffer), `thumbnail-${fileUpload.name}`);
         const compressedImage = await bufferToFile(await compressImage(inputBuffer), fileUpload.name);
+        
+        const fileType = await fileTypeFromBuffer(inputBuffer);
+        if (!fileType || !ALLOWED_IMAGE_MIME_TYPES.includes(fileType.mime)) {
+          throw new Error(`Only images of types ${ALLOWED_IMAGE_MIME_TYPES} are allowed.`);
+        }
 
         await fileStorage.set(storageKey, compressedImage);
         await thumbnailStorage.set(storageKey, thumbnailImage);
@@ -113,6 +119,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const headers: Record<string, string> = {
     "Content-Type": imageFile.type,
     "Cache-Control": "public, max-age=3600",
+    "X-Content-Type-Options": "nosniff",
   };
 
   if (shouldDownload) {
