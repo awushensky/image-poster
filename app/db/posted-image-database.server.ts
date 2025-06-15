@@ -36,13 +36,20 @@ export async function readPostedImageEntry(
 
 export async function readPostedImageEntries(
   userDid: string,
+  limit: number = 50,
+  offset: number = 0,
 ): Promise<PostedImage[]> {
+  if (limit > 50) {
+    throw new Error(`A maximum of 50 image queue entries can be retrieved at once`);
+  }
+
   return await useDatabase(async db => {
     const rows: PostedImageRow[] = await db.all(`
       SELECT * FROM posted_images 
       WHERE user_did = ? 
       ORDER BY created_at DESC
-    `, [userDid]);
+      LIMIT ? OFFSET ?
+    `, [userDid, limit, offset]);
     
     return rows.map(row => transformPostedImageRow(row));
   });

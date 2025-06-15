@@ -7,11 +7,12 @@ import type { User } from "~/model/user";
 import type { ApiResult } from "~/api-interface/api";
 
 
-async function loadImageQueue(userDid: string): Promise<QueuedImagesLoadResult> {
+async function loadImageQueue(userDid: string, page: number = 1, pageSize: number = 50): Promise<QueuedImagesLoadResult> {
+  const offset = (page - 1) * pageSize;
   return {
     status: 200,
     success: true,
-    images: await getImageQueueForUser(userDid),
+    images: await getImageQueueForUser(userDid, pageSize, offset),
   };
 }
 
@@ -152,5 +153,9 @@ export async function action({ request, params }: Route.ActionArgs) {
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireUser(request);
-  return Response.json(await loadImageQueue(user.did));
+  const url = new URL(request.url);
+  const page = parseInt(url.searchParams.get("page") || "1");
+  const pageSize = parseInt(url.searchParams.get("pageSize") || "50");
+
+  return Response.json(await loadImageQueue(user.did, page, pageSize));
 }

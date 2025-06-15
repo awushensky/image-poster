@@ -18,8 +18,8 @@ function parseQueuedImage(raw: any): QueuedImage {
   };
 }
 
-export async function fetchQueuedImages(): Promise<QueuedImage[]> {
-  const response = await fetch(`/api/image-queue`);
+export async function fetchQueuedImages(page: number = 1, pageSize: number = 50): Promise<QueuedImage[]> {
+  const response = await fetch(`/api/image-queue?page=${page}&pageSize=${pageSize}`);
   if (!response.ok) {
     throw new Error('Failed to fetch queued images');
   }

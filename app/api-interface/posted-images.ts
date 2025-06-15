@@ -13,8 +13,8 @@ export function parsePostedImage(raw: any): PostedImage {
   };
 }
 
-export async function fetchPostedImages(): Promise<PostedImage[]> {
-  const response = await fetch('/api/posted-images');
+export async function fetchPostedImages(page: number = 1, pageSize: number = 50): Promise<PostedImage[]> {
+  const response = await fetch(`/api/posted-images?page=${page}&pageSize=${pageSize}`);
   if (!response.ok) {
     throw new Error('Failed to fetch posted images');
   }
@@ -26,4 +26,3 @@ export async function fetchPostedImages(): Promise<PostedImage[]> {
 
   return (result.images || []).map(parsePostedImage);
 }
-

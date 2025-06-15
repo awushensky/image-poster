@@ -206,6 +206,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
           {activeTab === 'queue' && (
             <ImageQueue
               schedules={schedules}
+              initialQueuedImageCount={initialQueuedImageCount}
               userTimezone={user.timezone}
               onChanged={handleImageQueueChanged}
               onError={handleImageQueueError}
@@ -215,6 +216,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
           {activeTab === 'posted' && (
             <PostedImages
               isVisible={true}
+              initialPostedImageCount={initialPostedImageCount}
               onChanged={handlePostedImagesChanged}
               onError={handlePostedImagesError}
             />

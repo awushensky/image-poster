@@ -93,10 +93,18 @@ export async function updateImageQueueEntry(
   });
 }
 
-export async function getImageQueueForUser(userDid: string): Promise<QueuedImage[]> {
+export async function getImageQueueForUser(
+  userDid: string,
+  limit: number = 50,
+  offset: number = 0,
+): Promise<QueuedImage[]> {
+  if (limit > 50) {
+    throw new Error(`A maximum of 50 image queue entries can be retrieved at once`);
+  }
+
   const rows: QueuedImageRow[] = await useDatabase(async db => await db.all(
-    'SELECT * FROM queued_images WHERE user_did = ? ORDER BY queue_order ASC',
-    [userDid]
+    'SELECT * FROM queued_images WHERE user_did = ? ORDER BY queue_order ASC LIMIT ? OFFSET ?',
+    [userDid, limit, offset]
   ));
 
   return rows.map(transformQueuedImageRow);

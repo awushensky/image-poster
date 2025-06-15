@@ -11,9 +11,14 @@ import { type ProposedQueuedImage } from "~/model/queued-images";
 import { deleteQueuedImage, fetchQueuedImages, updateQueuedImage } from "~/api-interface/image-queue";
 import { fetchThumbnails } from "~/api-interface/thumbnail";
 import { type ThumbnailData } from "~/api-interface/thumbnail";
+import { fetchImageCounts } from '~/api-interface/image-counts';
+
+
+const PAGE_SIZE = 50;
 
 interface ImageQueueProps {
   schedules: PostingSchedule[];
+  initialQueuedImageCount: number;
   userTimezone: string;
   onChanged: (imageCount: number) => void;
   onError: (error: string) => void;
@@ -21,6 +26,7 @@ interface ImageQueueProps {
 
 const ImageQueue = ({
   schedules,
+  initialQueuedImageCount,
   userTimezone,
   onChanged,
   onError,
@@ -31,6 +37,8 @@ const ImageQueue = ({
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [editingImageKey, setEditingImageKey] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(initialQueuedImageCount);
 
   const queueItems = [...images].map(image => ({image: image, thumbnail: thumbnails.find(thumbnail => thumbnail.storageKey === image.storageKey)!}));
   const editingImage = editingImageKey ? images.find(img => img.storageKey === editingImageKey) : null;
@@ -38,18 +46,20 @@ const ImageQueue = ({
   // Load images on mount and when dependencies change
   useEffect(() => {
     loadImages();
-  }, [schedules, userTimezone]);
+  }, [schedules, userTimezone, page]);
 
   async function loadImages() {
     try {
       setLoading(true);
-      const queuedImages = await fetchQueuedImages();
+      const queuedImages = await fetchQueuedImages(page, PAGE_SIZE);
+      const imageCounts = await fetchImageCounts();
       const estimatedImages = estimateImageSchedule(queuedImages, schedules, userTimezone);
       const thumbnails = await fetchThumbnails(queuedImages.map(image => image.storageKey));
 
       setImages(estimatedImages);
+      setTotalCount(imageCounts.queued);
       setThumbnails(thumbnails);
-      onChanged(estimatedImages.length);
+      onChanged(imageCounts.queued);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load queued images';
       onError(errorMessage);
@@ -85,6 +95,7 @@ const ImageQueue = ({
       // Update local state immediately for responsive UI
       const reorderedImages = reorderImages(images, draggedImage.image.storageKey, droppedImage.image.queueOrder);
       setImages(estimateImageSchedule(reorderedImages, schedules, userTimezone));
+      setTotalCount(totalCount + 1);
 
       // Make API call. Do not await so we have a more reponsive UI
       updateQueuedImage(
@@ -92,7 +103,7 @@ const ImageQueue = ({
         { queueOrder: droppedImage.image.queueOrder },
       );
 
-      onChanged(images.length);
+      onChanged(totalCount + 1);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Reorder failure';
       onError(errorMessage);
@@ -127,7 +138,7 @@ const ImageQueue = ({
       updateQueuedImage(editingImageKey, update);
 
       setEditingImageKey(null);
-      onChanged(images.length);
+      onChanged(totalCount);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Reorder failure';
       onError(errorMessage);
@@ -141,11 +152,12 @@ const ImageQueue = ({
       // Update local state immediately for responsive UI
       const updatedImages = deleteImage(images, storageKey);
       setImages(estimateImageSchedule(updatedImages, schedules, userTimezone));
+      setTotalCount(totalCount - 1);
 
       // Make API call. Do not await so we have a more reponsive UI
       deleteQueuedImage(storageKey);
 
-      onChanged(updatedImages.length);
+      onChanged(totalCount - 1);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Reorder failure';
       onError(errorMessage);
@@ -211,6 +223,26 @@ const ImageQueue = ({
           )}
         </div>
       )}
+
+      <div className="flex justify-between items-center mt-6">
+        <button
+          disabled={page === 1}
+          onClick={() => setPage(page - 1)}
+          className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 disabled:opacity-50"
+        >
+          Previous
+        </button>
+        <span>
+          Page {page} of {Math.ceil(totalCount / PAGE_SIZE)}
+        </span>
+        <button
+          disabled={page * PAGE_SIZE >= totalCount}
+          onClick={() => setPage(page + 1)}
+          className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 disabled:opacity-50"
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 };
