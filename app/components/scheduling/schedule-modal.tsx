@@ -12,7 +12,6 @@ interface ScheduleModalProps {
   isOpen: boolean;
   user: User;
   onClose: () => void;
-  onSaved: () => void;
   onError: (error: string) => void;
 }
 
@@ -20,7 +19,6 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({
   isOpen,
   user,
   onClose,
-  onSaved,
   onError
 }) => {
   const [schedules, setSchedules] = useState<PostingSchedule[] | null>(null);
@@ -61,16 +59,10 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({
 
     try {
       await Promise.all(tasks);
-      onClose();
-      onSaved();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to save changes';
       onError(errorMessage);
     }
-  };
-
-  const handleCancel = () => {
-    onClose();
   };
 
   if (!isOpen) return null;
@@ -116,7 +108,6 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({
           initialTimezone={user.timezone}
           initialSchedules={schedules}
           onSaved={handleSave}
-          onCancel={handleCancel}
         />
       )}
     </Modal>

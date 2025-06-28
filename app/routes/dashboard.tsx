@@ -53,9 +53,6 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
 
   const handleScheduleModalClose = () => {
     setScheduleModalOpen(false);
-  };
-
-  const handleScheduleModalSaved = () => {
     revalidator.revalidate();
   };
 
@@ -121,7 +118,6 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
         isOpen={scheduleModalOpen}
         user={user}
         onClose={handleScheduleModalClose}
-        onSaved={handleScheduleModalSaved}
         onError={handleScheduleModalError}
       />
 
