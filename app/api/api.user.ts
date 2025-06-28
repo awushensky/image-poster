@@ -1,28 +1,23 @@
 import { requireUser } from "~/auth/session.server";
 import type { Route } from "./+types/api.user";
 import type { User } from "~/model/user";
-import { createOrUpdateUser } from "~/db/user-database.server";
+import { updateUser as updateUserDb } from "~/db/user-database.server";
 import type { UpdateUserResult } from "~/api-interface/user";
 import type { ApiResult } from "~/api-interface/api";
 
 
 async function updateUser(user: User, request: Request): Promise<UpdateUserResult> {
   try {
-    const body = await request.json();
-    const { timezone, handle, displayName, avatarUrl } = body as Partial<User>;
+    const update = await request.json() as Partial<User>;
 
-    const updatedUser = await createOrUpdateUser(
-      user.did,
-      handle ? handle.toString() : user.handle,
-      timezone ? timezone.toString() : user.timezone,
-      displayName ? displayName.toString() : user.displayName,
-      avatarUrl ? avatarUrl.toString() : user.avatarUrl,
-    );
+    const updatedUser = await updateUserDb({
+      ...update,
+      did: user.did,
+    });
 
     return {
       status: 200,
       success: true,
-      user: updatedUser,
       message: "User updated successfully"
     };
   } catch (error) {

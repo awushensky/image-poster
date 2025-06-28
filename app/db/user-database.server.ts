@@ -39,12 +39,12 @@ export async function createOrUpdateUser(
   avatarUrl?: string,
 ): Promise<User> {
   return await useDatabase(async db => {
+    // IMPORTANT NOTE: this will not update the timezone!! To update the timezone, you must specifically call update.
     const updatedRow: UserRow | undefined = await db.get(`
       INSERT INTO users (did, handle, timezone, display_name, avatar_url, last_login)
       VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       ON CONFLICT(did) DO UPDATE SET
         handle = excluded.handle,
-        timezone = excluded.timezone,
         display_name = excluded.display_name,
         avatar_url = excluded.avatar_url,
         last_login = CURRENT_TIMESTAMP
@@ -53,6 +53,36 @@ export async function createOrUpdateUser(
     
     return transformUserRow(updatedRow!);
   });
+}
+
+export async function updateUser(user: Omit<Partial<User>, keyof { did: string }> & Pick<User, keyof { did: string }>): Promise<void> {
+  return await useDatabase(async db => {
+    const setParts = [];
+    const values = [];
+
+    if (user.avatarUrl !== undefined) {
+      setParts.push("avatar_url = ?");
+      values.push(user.avatarUrl);
+    }
+
+    if (user.displayName !== undefined) {
+      setParts.push("display_name = ?");
+      values.push(user.displayName);
+    }
+
+    if (user.timezone !== undefined) {
+      setParts.push("timezone = ?");
+      values.push(user.timezone);
+    }
+
+    values.push(user.did);
+
+    await db.run(`
+      UPDATE users 
+      SET ${setParts.join(', ')} 
+      WHERE did = ?
+    `, values);
+  })
 }
 
 export async function getUserFromSession(sessionToken: string): Promise<User | undefined> {

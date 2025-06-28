@@ -2,9 +2,7 @@ import type { User } from "~/model/user";
 import type { ApiResult } from "./api";
 
 
-export interface UpdateUserResult extends ApiResult {
-  user?: User;
-}
+export interface UpdateUserResult extends ApiResult { }
 
 export function parseUser(raw: any): User {
   return {
@@ -14,7 +12,7 @@ export function parseUser(raw: any): User {
   };
 }
 
-export async function updateUser(update: { timezone: string }): Promise<User> {
+export async function updateUser(update: { timezone: string }): Promise<void> {
   const response = await fetch('/api/user', {
     method: 'PUT',
     headers: {
@@ -24,10 +22,7 @@ export async function updateUser(update: { timezone: string }): Promise<User> {
   });
 
   const result = await response.json() as UpdateUserResult;
-  if (!result.success || !result.user) {
+  if (!result.success) {
     throw new Error(result.error || 'Failed to update timezone');
   }
-
-  return result.user;
 }
-
