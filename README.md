@@ -8,8 +8,30 @@ You'll need to set up a `config.json` file and map it to `/config`. See the exam
 
 Note that in order for bsky oauth to work, bluesky must be able to contact this server to read the `jwks.json` and `client-metadata.json` routes, so this has to be publicly accessible at the `BASE_URL`.
 
+## Running
+This image is posted to docker hub under `awushensky/image-poster`. Here is an example docker-compose configuration
+```
+  image-poster:
+    container_name: image-poster
+    image: awushensky/image-poster:latest
+    user: ${DOCKERUSER_USER_ID}:${DOCKERUSER_GROUP_ID}
+    restart: unless-stopped
+    environment:
+      - BASE_URL=https://<your_url_here>
+      - SESSION_SECRET=${IMAGE_POSTER_SESSION_SECRET}
+      - PRIVATE_KEY_1=${IMAGE_POSTER_PRIVATE_KEY_1}
+      - PRIVATE_KEY_2=${IMAGE_POSTER_PRIVATE_KEY_2}  
+      - PRIVATE_KEY_3=${IMAGE_POSTER_PRIVATE_KEY_3}
+    volumes:
+      - ./image-poster/data:/app/data          # SQLite database
+      - ./image-poster/uploads:/app/uploads    # Image uploads
+      - ./image-poster/config:/config:ro       # Configuration
+    ports:
+      - 3000:3000
+```
+
 ## Building
-To run this, you can build it using docker. Here's an example docker-commpose configuration
+To build this image from source, you can build it using docker. Here's an example docker-commpose configuration
 ```
   image-poster:
     build:
@@ -28,12 +50,6 @@ To run this, you can build it using docker. Here's an example docker-commpose co
       - ./image-poster/data:/app/data          # SQLite database
       - ./image-poster/uploads:/app/uploads    # Image uploads
       - ./image-poster/config:/config          # Configuation
-    healthcheck:
-      test: ["CMD", "node", "/app/health-check.js"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
     ports:
       - 3000:3000
 ```
@@ -65,12 +81,6 @@ Or if you want to run in development mode with hot reloading, use a configuratio
       - ./image-poster/config:/config          # Configuation
       - ~/src/image-poster:/app:delegated
       - /app/node_modules
-    healthcheck:
-      test: ["CMD", "node", "/app/health-check.js"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
     ports:
       - 3000:3000
       - 24678:24678
