@@ -75,5 +75,3 @@ Or if you want to run in development mode with hot reloading, use a configuratio
       - 3000:3000
       - 24678:24678
 ```
-
-Note that the healthcheck is a kludge to make the posting scheduler start with the application. Otherwise, the posting scheduler won't start until some page is loaded. This is a limitation of the way that I built the server-side of this application.
