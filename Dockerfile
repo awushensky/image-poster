@@ -1,9 +1,16 @@
+FROM node:20-alpine AS base
+RUN apk add --no-cache sqlite
+COPY scripts/backup.sh /app/scripts/backup.sh
+COPY scripts/restore.sh /app/scripts/restore.sh
+COPY scripts/list-backups.sh app/scripts/list-backups.sh
+RUN chmod +x /app/scripts/backup.sh /app/scripts/restore.sh /app/scripts/list-backups.sh
+
 FROM node:20-alpine AS development-dependencies-env
 COPY . /app
 WORKDIR /app
 RUN npm ci
 
-FROM node:20-alpine AS development
+FROM base AS development
 COPY . /app
 COPY --from=development-dependencies-env /app/node_modules /app/node_modules
 ENV CHOKIDAR_USEPOLLING=true
@@ -24,7 +31,7 @@ COPY --from=development-dependencies-env /app/node_modules /app/node_modules
 WORKDIR /app
 RUN npm run build
 
-FROM node:20-alpine AS production
+FROM base AS production
 COPY ./package.json package-lock.json /app/
 COPY --from=production-dependencies-env /app/node_modules /app/node_modules
 COPY --from=build-env /app/build /app/build
