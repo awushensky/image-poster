@@ -1,13 +1,9 @@
 FROM node:20-alpine AS base
-RUN apk add --no-cache sqlite dcron
+RUN apk add --no-cache sqlite
 COPY scripts/backup.sh /app/scripts/backup.sh
 COPY scripts/restore.sh /app/scripts/restore.sh
 COPY scripts/list-backups.sh app/scripts/list-backups.sh
 RUN chmod +x /app/scripts/backup.sh /app/scripts/restore.sh /app/scripts/list-backups.sh
-RUN echo "0 3 * * * /app/scripts/backup.sh >> /var/log/backup.log 2>&1" > /etc/crontabs/root
-COPY scripts/docker-entrypoint.sh /app/scripts/docker-entrypoint.sh
-RUN chmod +x /app/scripts/docker-entrypoint.sh
-ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
 
 FROM node:20-alpine AS development-dependencies-env
 COPY . /app
