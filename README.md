@@ -107,8 +107,3 @@ Restoring a backup:
 ```
 docker exec image-poster /app/scripts/restore.sh backup_20251008_030000.tar.gz
 ```
-
-Viewing backup logs:
-```
-docker exec image-poster tail -f /var/log/backup.log
-```
