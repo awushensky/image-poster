@@ -4,9 +4,10 @@ set -e
 DB_PATH="/app/data/database.db"
 UPLOADS_DIR="/app/uploads"
 BACKUP_DIR="/app/backups"
+SAFETY_BACKUP_DIR="/app/backups/safety"
 
 if [ -z "$1" ]; then
-    echo "Usage: docker exec image-poster /app/scripts/restore-db.sh <backup_filename>"
+    echo "Usage: docker exec image-poster /app/scripts/restore.sh <backup_filename>"
     echo ""
     echo "Available backups:"
     ls -lh "$BACKUP_DIR"/*.tar.gz 2>/dev/null || echo "No backups found"
@@ -46,11 +47,13 @@ fi
 # Backup current state before restoring
 echo "[$(date)] Creating safety backup of current state..."
 SAFETY_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+mkdir -p "$SAFETY_BACKUP_DIR"  # Create safety backup directory
+
 if [ -f "$DB_PATH" ]; then
-    cp "$DB_PATH" "$DB_PATH.before-restore-$SAFETY_TIMESTAMP"
+    cp "$DB_PATH" "$SAFETY_BACKUP_DIR/database.db.before-restore-$SAFETY_TIMESTAMP"
 fi
 if [ -d "$UPLOADS_DIR" ]; then
-    cp -r "$UPLOADS_DIR" "$UPLOADS_DIR.before-restore-$SAFETY_TIMESTAMP"
+    cp -r "$UPLOADS_DIR" "$SAFETY_BACKUP_DIR/uploads.before-restore-$SAFETY_TIMESTAMP"
 fi
 
 # Restore database
@@ -74,6 +77,6 @@ fi
 rm -rf "$TEMP_RESTORE_DIR"
 
 echo "[$(date)] Restore completed!"
-echo "Previous state saved as:"
-echo "  - $DB_PATH.before-restore-$SAFETY_TIMESTAMP"
-echo "  - $UPLOADS_DIR.before-restore-$SAFETY_TIMESTAMP"
+echo "Previous state saved in: $SAFETY_BACKUP_DIR/"
+echo "  - database.db.before-restore-$SAFETY_TIMESTAMP"
+echo "  - uploads.before-restore-$SAFETY_TIMESTAMP/"
