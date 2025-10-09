@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-DB_PATH="/app/data/database.db"
+DB_PATH="/app/data/app.db"
 UPLOADS_DIR="/app/uploads"
 BACKUP_DIR="/app/backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
@@ -19,7 +19,8 @@ echo "[$(date)] Starting backup..."
 # Backup database
 if [ -f "$DB_PATH" ]; then
     echo "[$(date)] Backing up database..."
-    sqlite3 "$DB_PATH" ".backup '$TEMP_DIR/database.db'"
+    # Using .backup command handles WAL files properly
+    sqlite3 "$DB_PATH" ".backup '$TEMP_DIR/app.db'"
 else
     echo "[$(date)] Warning: Database not found at $DB_PATH"
 fi
