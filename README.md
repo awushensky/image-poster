@@ -24,6 +24,7 @@ This image is posted to docker hub under `awushensky/image-poster`. Here is an e
       - PRIVATE_KEY_3=${IMAGE_POSTER_PRIVATE_KEY_3}
     volumes:
       - ./image-poster/data:/app/data          # SQLite database
+      - ./image-poster/backups:/app/backups    # Backups
       - ./image-poster/uploads:/app/uploads    # Image uploads
       - ./image-poster/config:/config:ro       # Configuration
     ports:
@@ -48,6 +49,7 @@ To build this image from source, you can build it using docker. Here's an exampl
       - PRIVATE_KEY_3=${IMAGE_POSTER_PRIVATE_KEY_3}
     volumes:
       - ./image-poster/data:/app/data          # SQLite database
+      - ./image-poster/backups:/app/backups    # Backups
       - ./image-poster/uploads:/app/uploads    # Image uploads
       - ./image-poster/config:/config          # Configuation
     ports:
@@ -77,6 +79,7 @@ Or if you want to run in development mode with hot reloading, use a configuratio
       - PRIVATE_KEY_3=${IMAGE_POSTER_PRIVATE_KEY_3}
     volumes:
       - ./image-poster/data:/app/data          # SQLite database
+      - ./image-poster/backups:/app/backups    # Backups
       - ./image-poster/uploads:/app/uploads    # Image uploads
       - ./image-poster/config:/config          # Configuation
       - ~/src/image-poster:/app:delegated
@@ -84,4 +87,28 @@ Or if you want to run in development mode with hot reloading, use a configuratio
     ports:
       - 3000:3000
       - 24678:24678
+```
+
+## Backups
+
+This application creates a backup of the database and uploaded images nightly at 03:00. It stores these in `/app/backups`.
+
+Listing available backups:
+```
+docker exec image-poster /app/scripts/list-backups.sh
+```
+
+Creating a manual backup:
+```
+docker exec image-poster /app/scripts/backup.sh
+```
+
+Restoring a backup:
+```
+docker exec image-poster /app/scripts/restore.sh backup_20251008_030000.tar.gz
+```
+
+Viewing backup logs:
+```
+docker exec image-poster tail -f /var/log/backup.log
 ```
