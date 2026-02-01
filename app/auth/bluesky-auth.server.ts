@@ -162,7 +162,7 @@ export async function handleAuthCallback(params: URLSearchParams) {
   if (!isAllowedUser(profile.data.did)) {
     await deleteOAuthSession(profile.data.did);
     await deleteUserSession(profile.data.did);
-    throw new Error('User authentication failure');
+    throw new Error(`User authentication failure: DID ${profile.data.did} not in allowed list`);
   }
 
   const user = await createOrUpdateUser(
