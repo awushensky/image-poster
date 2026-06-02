@@ -4,7 +4,7 @@ export default {
   content: [
     './app/**/*.{js,ts,jsx,tsx}',
   ],
-  darkMode: 'class',
+  darkMode: 'media',
   theme: {
     colors: {
       ...colors,
