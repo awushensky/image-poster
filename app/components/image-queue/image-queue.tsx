@@ -4,8 +4,6 @@ import type { ImageWithEstimatedUpload } from '~/lib/posting-time-estimator';
 import { estimateImageSchedule } from '~/lib/posting-time-estimator';
 import { deleteImage, reorderImages, updateImage } from '~/lib/dashboard-utils';
 import ImageCard from './image-card';
-import Modal from '../modal';
-import EditPostModalContent from './edit-post-modal-content';
 import { type PostingSchedule } from "~/model/posting-schedules";
 import { type ProposedQueuedImage } from "~/model/queued-images";
 import { deleteQueuedImage, fetchQueuedImages, updateQueuedImage } from "~/api-interface/image-queue";
@@ -36,12 +34,10 @@ const ImageQueue = ({
   const [loading, setLoading] = useState(true);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const [editingImageKey, setEditingImageKey] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(initialQueuedImageCount);
 
   const queueItems = [...images].map(image => ({image: image, thumbnail: thumbnails.find(thumbnail => thumbnail.storageKey === image.storageKey)!}));
-  const editingImage = editingImageKey ? images.find(img => img.storageKey === editingImageKey) : null;
 
   // Load images on mount and when dependencies change
   useEffect(() => {
@@ -118,29 +114,17 @@ const ImageQueue = ({
     setDragOverIndex(null);
   };
 
-  function handleEditOpen(storageKey: string) {
-    setEditingImageKey(storageKey);
-  };
-
-  function handleEditClose() {
-    setEditingImageKey(null);
-  };
-
-  async function handleEditSave(update: Partial<ProposedQueuedImage>) {
-    if (!editingImageKey) return;
-
+  async function handleSave(storageKey: string, update: Partial<ProposedQueuedImage>) {
     try {
-      // Update local state immediately for responsive UI
-      const updatedImages = updateImage(images, editingImageKey, update);
+      const updatedImages = updateImage(images, storageKey, update);
       setImages(estimateImageSchedule(updatedImages, schedules, userTimezone));
 
-      // Make API call. Do not await so we have a more reponsive UI
-      updateQueuedImage(editingImageKey, update);
+      // Make API call. Do not await so we have a more responsive UI
+      updateQueuedImage(storageKey, update);
 
-      setEditingImageKey(null);
       onChanged(totalCount);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Reorder failure';
+      const errorMessage = error instanceof Error ? error.message : 'Update failure';
       onError(errorMessage);
     }
   };
@@ -166,20 +150,6 @@ const ImageQueue = ({
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-gray-50 dark:bg-gray-900 min-h-screen relative">
-      {editingImageKey && editingImage && (
-        <Modal
-          onClose={handleEditClose}
-          title="Edit Post Text"
-        >
-          <EditPostModalContent
-            initialText={editingImage.postText || ''}
-            initialIsNsfw={editingImage.isNsfw || false}
-            onSave={handleEditSave}
-            onCancel={handleEditClose}
-          />
-        </Modal>
-      )}
-
       {loading ? (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400">
           <div className="text-lg font-medium mb-2">Loading images...</div>
@@ -210,7 +180,7 @@ const ImageQueue = ({
                 image={queueItem.image}
                 thumbnailBlob={`data:${queueItem.thumbnail.contentType};base64,${queueItem.thumbnail.data}`}
                 onDelete={handleDelete}
-                onEdit={handleEditOpen}
+                onSave={handleSave}
               />
             </div>
           ))}

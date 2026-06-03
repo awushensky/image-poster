@@ -1,23 +1,26 @@
 import React, { useState } from 'react';
-import { Calendar, AlertTriangle, Trash2, Edit3 } from 'lucide-react';
+import { Calendar, Trash2 } from 'lucide-react';
 import type { ImageWithEstimatedUpload } from '~/lib/posting-time-estimator';
 import { formatRelativeTime } from '~/lib/time-utils';
 import Modal from '../modal';
+import type { ProposedQueuedImage } from '~/model/queued-images';
 
 interface ImageCardProps {
   image: ImageWithEstimatedUpload;
-  thumbnailBlob: string,
+  thumbnailBlob: string;
   onDelete: (storageKey: string, e: React.MouseEvent) => void;
-  onEdit: (storageKey: string) => void;
+  onSave: (storageKey: string, update: Partial<ProposedQueuedImage>) => void;
 }
 
 const ImageCard: React.FC<ImageCardProps> = ({
   image,
   thumbnailBlob,
   onDelete,
-  onEdit
+  onSave,
 }) => {
   const [showPreview, setShowPreview] = useState(false);
+  const [postText, setPostText] = useState(image.postText || '');
+  const [isNsfw, setIsNsfw] = useState(image.isNsfw || false);
 
   function handleImageClick() {
     setShowPreview(true);
@@ -25,6 +28,18 @@ const ImageCard: React.FC<ImageCardProps> = ({
 
   function handleClosePreview() {
     setShowPreview(false);
+  }
+
+  function handleTextBlur() {
+    if (postText !== (image.postText || '')) {
+      onSave(image.storageKey, { postText, isNsfw });
+    }
+  }
+
+  function handleNsfwChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const newIsNsfw = e.target.checked;
+    setIsNsfw(newIsNsfw);
+    onSave(image.storageKey, { postText, isNsfw: newIsNsfw });
   }
 
   return (
@@ -46,20 +61,14 @@ const ImageCard: React.FC<ImageCardProps> = ({
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Post Text
               </label>
-              <div className="relative">
-                <div className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 min-h-[2.5rem] text-sm text-gray-700 dark:text-gray-300">
-                  {image.postText || (
-                    <span className="text-gray-400 dark:text-gray-500 italic">No post text set</span>
-                  )}
-                </div>
-                <button
-                  onClick={() => onEdit(image.storageKey)}
-                  className="absolute top-2 right-2 p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md transition-colors"
-                  title="Edit post text"
-                >
-                  <Edit3 className="w-4 h-4" />
-                </button>
-              </div>
+              <textarea
+                value={postText}
+                onChange={(e) => setPostText(e.target.value)}
+                onBlur={handleTextBlur}
+                placeholder="No post text set"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 italic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent resize-none"
+                rows={2}
+              />
             </div>
 
             <div className="flex items-center justify-between">
@@ -70,12 +79,15 @@ const ImageCard: React.FC<ImageCardProps> = ({
                 </span>
               </div>
 
-              {!image.isNsfw && (
-                <div className="flex items-center text-sm text-amber-600 dark:text-amber-400">
-                  <AlertTriangle className="w-4 h-4 mr-1" />
-                  <span>Not flagged NSFW</span>
-                </div>
-              )}
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={isNsfw}
+                  onChange={handleNsfwChange}
+                  className="w-4 h-4 text-red-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-red-500 dark:focus:ring-red-400"
+                />
+                NSFW
+              </label>
             </div>
           </div>
 
@@ -109,10 +121,10 @@ const ImageCard: React.FC<ImageCardProps> = ({
                 }}
               />
             </div>
-            {image.postText && (
+            {postText && (
               <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg w-full">
                 <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                  {image.postText}
+                  {postText}
                 </p>
               </div>
             )}
