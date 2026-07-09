@@ -15,8 +15,8 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
-    "@atproto/api": "^0.15.8",
-    "@atproto/oauth-client-node": "^0.2.18",
+    "@atproto/api": "^0.20.28",
+    "@atproto/oauth-client-node": "^0.4.8",
     "@mjackson/file-storage": "^0.6.1",
     "@mjackson/form-data-parser": "^0.7.0",
     "@react-router/node": "^7.5.3",

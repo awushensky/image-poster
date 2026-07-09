@@ -315,7 +315,7 @@ export async function createThumbnail(
 export async function bufferToFile(image: Buffer, fileName: string): Promise<File> {
   const metadata = await getImageMetadata(image);
   const mimeType = getMimeType(metadata.format || 'jpeg');
-  return new File([image], fileName, { type: mimeType });
+  return new File([new Uint8Array(image)], fileName, { type: mimeType });
 }
 
 /**
