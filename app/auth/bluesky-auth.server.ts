@@ -1,6 +1,6 @@
 import { NodeOAuthClient, type NodeSavedSession, TokenRefreshError, TokenRevokedError } from '@atproto/oauth-client-node';
 import { JoseKey } from '@atproto/jwk-jose';
-import { Agent, AppBskyFeedPost } from '@atproto/api';
+import { Agent, AppBskyFeedPost, RichText } from '@atproto/api';
 import { createOrUpdateUser } from '~/db/user-database.server';
 import { getUserTimezone } from '../lib/time-utils';
 import { deleteOAuthSession, getOAuthSession, storeOAuthSession } from '~/db/oauth-session-database.server';
@@ -188,6 +188,9 @@ export async function postImageToBluesky(
     const width = metadata.width || 0;
     const height = metadata.height || 0;
 
+    const rt = new RichText({ text: postText });
+    await rt.detectFacets(agent);
+
     const uploadResult = await agent.uploadBlob(imageBuffer, {
       encoding: `image/${metadata.format}`,
     });
@@ -197,7 +200,8 @@ export async function postImageToBluesky(
     }
 
     const postData: Partial<AppBskyFeedPost.Record> = {
-      text: postText,
+      text: rt.text,
+      facets: rt.facets,
       embed: {
         $type: 'app.bsky.embed.images',
         images: [{

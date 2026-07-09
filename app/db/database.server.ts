@@ -309,4 +309,17 @@ export async function setupTables(db: SqliteDatabase) {
     await db.exec('ROLLBACK;');
     throw error;
   }
+
+  // Migrations: add columns that may not exist on older databases
+  const migrations = [
+    "ALTER TABLE queued_images ADD COLUMN alt_text TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE posted_images ADD COLUMN alt_text TEXT NOT NULL DEFAULT ''",
+  ];
+  for (const sql of migrations) {
+    try {
+      await db.run(sql);
+    } catch {
+      // Column already exists
+    }
+  }
 }

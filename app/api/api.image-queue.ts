@@ -39,10 +39,11 @@ async function updateQueuedImage(user: User, storageKey: string, update: FormDat
 
 
   const postText = update.get("postText")?.toString();
+  const altText = update.get("altText")?.toString();
   const isNsfwStr = update.get("isNsfw")?.toString()?.toLowerCase();
   const isNsfw = isNsfwStr === undefined ? undefined : isNsfwStr === "true";
-  if (postText || isNsfw !== undefined) {
-    await updateImageQueueEntry(user.did, storageKey, { postText, isNsfw });
+  if (postText || altText !== undefined || isNsfw !== undefined) {
+    await updateImageQueueEntry(user.did, storageKey, { postText, altText, isNsfw });
   }
 
   return {
