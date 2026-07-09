@@ -20,6 +20,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
 }) => {
   const [showPreview, setShowPreview] = useState(false);
   const [postText, setPostText] = useState(image.postText || '');
+  const [altText, setAltText] = useState(image.altText || '');
   const [isNsfw, setIsNsfw] = useState(image.isNsfw || false);
 
   function handleImageClick() {
@@ -33,6 +34,12 @@ const ImageCard: React.FC<ImageCardProps> = ({
   function handleTextBlur() {
     if (postText !== (image.postText || '')) {
       onSave(image.storageKey, { postText, isNsfw });
+    }
+  }
+
+  function handleAltTextBlur() {
+    if (altText !== image.altText) {
+      onSave(image.storageKey, { altText });
     }
   }
 
@@ -68,6 +75,20 @@ const ImageCard: React.FC<ImageCardProps> = ({
                 placeholder="No post text set"
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 italic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent resize-none"
                 rows={2}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Alt Text
+              </label>
+              <input
+                type="text"
+                value={altText}
+                onChange={(e) => setAltText(e.target.value)}
+                onBlur={handleAltTextBlur}
+                placeholder="No alt text"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 italic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
               />
             </div>
 

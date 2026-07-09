@@ -2,6 +2,7 @@ export interface QueuedImage {
   storageKey: string;
   userDid: string;
   postText: string;
+  altText: string;
   isNsfw: boolean;
   queueOrder: number;
   createdAt: Date;

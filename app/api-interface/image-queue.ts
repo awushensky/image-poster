@@ -43,6 +43,10 @@ export async function updateQueuedImage(storageKey: string, update: Partial<Prop
     formData.append('postText', update.postText);
   }
 
+  if (update.altText !== undefined) {
+    formData.append('altText', update.altText);
+  }
+
   if (update.isNsfw !== undefined) {
     formData.append('isNsfw', update.isNsfw.toString());
   }
