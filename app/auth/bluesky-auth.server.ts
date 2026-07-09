@@ -1,4 +1,4 @@
-import { NodeOAuthClient, type NodeSavedSession, type Session, TokenRefreshError, TokenRevokedError } from '@atproto/oauth-client-node';
+import { NodeOAuthClient, type NodeSavedSession, TokenRefreshError, TokenRevokedError } from '@atproto/oauth-client-node';
 import { JoseKey } from '@atproto/jwk-jose';
 import { Agent, AppBskyFeedPost } from '@atproto/api';
 import { createOrUpdateUser } from '~/db/user-database.server';
@@ -82,40 +82,24 @@ async function initOAuthClient() {
     },
 
     requestLock: async <T>(name: string, fn: () => T | Promise<T> | PromiseLike<T>): Promise<T> => {
-      const lockKey = `oauth:lock:${name}`;
       return acquireInMemoryLock(name, fn);
+    },
+
+    onUpdate: (sub) => {
+      console.log('Received OAuth token refresh update:', sub);
+    },
+
+    onDelete: (sub, cause) => {
+      console.log(`OAuth session ${sub} deleted:`, cause);
+      Promise.all([deleteOAuthSession(sub), deleteUserSession(sub)]).catch((error) => {
+        console.error(`Failed to clean up deleted session ${sub}:`, error);
+      });
     },
   });
 
-  setupOAuthEventListeners(oauthClient);
   return oauthClient;
 }
 
-/**
- * BlueSky OAuth provides event listeners to handle token updates and session deletions.
- * Previously, I thought we needed to manually handle token refreshes, but the client
- * automatically manages this for us. We just need to listen for updates and deletions.
- */
-function setupOAuthEventListeners(client: NodeOAuthClient) {
-  client.addEventListener('updated', async (event: CustomEvent<{ sub: string; } & Session>) => {
-    console.log('Received OAuth token refresh update:', event.detail.sub);
-  });
-
-  client.addEventListener('deleted', async (event: CustomEvent<{
-    sub: string;
-    cause: TokenRefreshError | TokenRevokedError | unknown;
-  }>) => {
-    const { sub, cause } = event.detail;
-    console.log(`OAuth session ${sub} deleted:`, cause);
-    
-    try {
-      await deleteOAuthSession(sub);
-      await deleteUserSession(sub);
-    } catch (error) {
-      console.error(`Failed to clean up deleted session ${sub}:`, error);
-    }
-  });
-}
 
 export async function isSessionValid(userDid: string): Promise<boolean> {
   try {
