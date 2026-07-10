@@ -1,4 +1,4 @@
-import sharp from 'sharp';
+import sharp, { type Sharp } from 'sharp';
 import { Readable } from 'stream';
 import type { FileUpload } from '@mjackson/form-data-parser';
 
@@ -31,7 +31,7 @@ const DEFAULT_OPTIONS: Required<CompressionOptions> = {
 /**
  * Helper function to process sharp instance and return metadata
  */
-async function processSharpInstance(sharpInstance: sharp.Sharp): Promise<{
+async function processSharpInstance(sharpInstance: Sharp): Promise<{
   buffer: Buffer;
   width: number;
   height: number;
@@ -52,10 +52,10 @@ async function processSharpInstance(sharpInstance: sharp.Sharp): Promise<{
  * Apply format-specific compression settings
  */
 function applyFormatCompression(
-  sharpInstance: sharp.Sharp, 
+  sharpInstance: Sharp, 
   format: string, 
   quality: number
-): sharp.Sharp {
+): Sharp {
   switch (format) {
     case 'jpeg':
     case 'jpg':
@@ -315,7 +315,7 @@ export async function createThumbnail(
 export async function bufferToFile(image: Buffer, fileName: string): Promise<File> {
   const metadata = await getImageMetadata(image);
   const mimeType = getMimeType(metadata.format || 'jpeg');
-  return new File([image], fileName, { type: mimeType });
+  return new File([new Uint8Array(image)], fileName, { type: mimeType });
 }
 
 /**

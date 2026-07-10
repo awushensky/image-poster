@@ -1,11 +1,11 @@
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 RUN apk add --no-cache sqlite
 COPY scripts/backup.sh /app/scripts/backup.sh
 COPY scripts/restore.sh /app/scripts/restore.sh
 COPY scripts/list-backups.sh app/scripts/list-backups.sh
 RUN chmod +x /app/scripts/backup.sh /app/scripts/restore.sh /app/scripts/list-backups.sh
 
-FROM node:20-alpine AS development-dependencies-env
+FROM node:22-alpine AS development-dependencies-env
 COPY . /app
 WORKDIR /app
 RUN npm ci
@@ -20,12 +20,12 @@ WORKDIR /app
 EXPOSE 3000
 CMD ["npm", "run", "dev"]
 
-FROM node:20-alpine AS production-dependencies-env
+FROM node:22-alpine AS production-dependencies-env
 COPY ./package.json package-lock.json /app/
 WORKDIR /app
 RUN npm ci --omit=dev
 
-FROM node:20-alpine AS build-env
+FROM node:22-alpine AS build-env
 COPY . /app/
 COPY --from=development-dependencies-env /app/node_modules /app/node_modules
 WORKDIR /app

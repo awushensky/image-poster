@@ -10,6 +10,7 @@ interface QueuedImageRow {
   storage_key: string;
   user_did: string;
   post_text: string;
+  alt_text: string;
   is_nsfw: number;
   queue_order: number;
   created_at: string;
@@ -25,6 +26,7 @@ function transformQueuedImageRow(row: QueuedImageRow): QueuedImage {
     storageKey: row.storage_key,
     userDid: row.user_did,
     postText: row.post_text,
+    altText: row.alt_text,
     isNsfw: Boolean(row.is_nsfw),
     queueOrder: row.queue_order,
     createdAt: new Date(row.created_at),
@@ -75,7 +77,12 @@ export async function updateImageQueueEntry(
       setParts.push('post_text = ?');
       values.push(updates.postText);
     }
-    
+
+    if (updates.altText !== undefined) {
+      setParts.push('alt_text = ?');
+      values.push(updates.altText);
+    }
+
     if (updates.isNsfw !== undefined) {
       setParts.push('is_nsfw = ?');
       values.push(updates.isNsfw);

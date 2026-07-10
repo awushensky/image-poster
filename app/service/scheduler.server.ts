@@ -115,6 +115,7 @@ class ImageScheduler {
         imageBuffer,
         nextImage.postText,
         nextImage.isNsfw,
+        nextImage.altText,
       );
 
       // Single database transaction: move to posted, reorder queue

@@ -7,6 +7,7 @@ interface PostedImageRow {
   storage_key: string;
   user_did: string;
   post_text: string;
+  alt_text: string;
   is_nsfw: number;
   created_at: string;
 }
@@ -16,6 +17,7 @@ function transformPostedImageRow(row: PostedImageRow): PostedImage {
     storageKey: row.storage_key,
     userDid: row.user_did,
     postText: row.post_text,
+    altText: row.alt_text,
     isNsfw: Boolean(row.is_nsfw),
     createdAt: new Date(row.created_at),
   };
@@ -81,9 +83,9 @@ export async function moveImageToPosted(
     try {
       // Create posted image entry
       await db.run(`
-        INSERT INTO posted_images (user_did, storage_key, post_text, is_nsfw)
-        VALUES (?, ?, ?, ?)
-      `, [userDid, image.storageKey, image.postText, image.isNsfw]);
+        INSERT INTO posted_images (user_did, storage_key, post_text, alt_text, is_nsfw)
+        VALUES (?, ?, ?, ?, ?)
+      `, [userDid, image.storageKey, image.postText, image.altText, image.isNsfw]);
 
       // Get the order of the image we're deleting for reordering
       const imageToDelete = await db.get(
