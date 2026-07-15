@@ -1,6 +1,7 @@
 import type { QueuedImage } from "~/model/queued-images";
 import type { PostedImage } from "~/model/posted-images";
 import { useDatabase } from "./database.server";
+import { closeQueueOrderGap } from "./image-queue-database.server";
 
 
 interface PostedImageRow {
@@ -104,11 +105,7 @@ export async function moveImageToPosted(
       );
 
       // Reorder remaining images to fill the gap
-      await db.run(`
-        UPDATE queued_images
-        SET queue_order = queue_order - 1
-        WHERE user_did = ? AND queue_order > ?
-      `, [userDid, imageToDelete.queue_order]);
+      await closeQueueOrderGap(db, userDid, imageToDelete.queue_order);
 
       await db.run('COMMIT');
     } catch (error) {
