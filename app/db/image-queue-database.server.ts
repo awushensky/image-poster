@@ -1,3 +1,4 @@
+import type { Database as SqliteDatabase } from "sqlite";
 import type { ProposedQueuedImage } from "~/model/queued-images";
 import type { QueuedImage } from "~/model/queued-images";
 import { useDatabase } from "./database.server";
@@ -5,6 +6,34 @@ import { getMutex } from "~/lib/mutex";
 
 
 const MUTEX_PURPOSE = "image-queue";
+
+/**
+ * Decrements queue_order for every row after `removedOrder`, closing the gap
+ * left by a removed row. Must be called within the caller's own transaction,
+ * after the row at `removedOrder` has already been deleted.
+ *
+ * Shifts through a disjoint negative range first: decrementing queue_order
+ * directly while scanning the same UNIQUE(user_did, queue_order) index can
+ * transiently collide two rows on one value mid-statement (SQLITE_CONSTRAINT),
+ * since SQLite doesn't guarantee row-processing order for a bulk UPDATE.
+ */
+export async function closeQueueOrderGap(
+  db: SqliteDatabase,
+  userDid: string,
+  removedOrder: number,
+): Promise<void> {
+  await db.run(`
+    UPDATE queued_images
+    SET queue_order = -queue_order
+    WHERE user_did = ? AND queue_order > ?
+  `, [userDid, removedOrder]);
+
+  await db.run(`
+    UPDATE queued_images
+    SET queue_order = -queue_order - 1
+    WHERE user_did = ? AND queue_order < 0
+  `, [userDid]);
+}
 
 interface QueuedImageRow {
   storage_key: string;
@@ -222,21 +251,7 @@ export async function deleteFromImageQueue(userDid: string, storageKey: string):
         [userDid, storageKey]
       );
 
-      // Shift through a disjoint negative range first: decrementing queue_order
-      // directly while scanning the same UNIQUE(user_did, queue_order) index can
-      // transiently collide two rows on one value mid-statement (SQLITE_CONSTRAINT),
-      // since SQLite doesn't guarantee row-processing order for the bulk UPDATE.
-      await db.run(`
-        UPDATE queued_images
-        SET queue_order = -queue_order
-        WHERE user_did = ? AND queue_order > ?
-      `, [userDid, imageToDelete.queue_order]);
-
-      await db.run(`
-        UPDATE queued_images
-        SET queue_order = -queue_order - 1
-        WHERE user_did = ? AND queue_order < 0
-      `, [userDid]);
+      await closeQueueOrderGap(db, userDid, imageToDelete.queue_order);
 
       await db.run('COMMIT');
     } catch (error) {
