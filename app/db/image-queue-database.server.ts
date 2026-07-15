@@ -134,22 +134,23 @@ export async function reorderImageInQueue(
   destinationOrder: number,
 ): Promise<void> {
   return await getMutex(MUTEX_PURPOSE, userDid).runExclusive(async () => await useDatabase(async db => {
-    const currentImage = await db.get(
-      'SELECT queue_order FROM queued_images WHERE user_did = ? AND storage_key = ?',
-      [userDid, sourceImageStorageKey]
-    ) as {queue_order: number} | undefined;
-    
-    if (!currentImage) {
-      throw new Error('Image not found');
-    }
-    
-    const sourceOrder = currentImage.queue_order;
-    if (sourceOrder === destinationOrder) {
-      return;
-    }
-    
     await db.run('BEGIN IMMEDIATE');
     try {
+      const currentImage = await db.get(
+        'SELECT queue_order FROM queued_images WHERE user_did = ? AND storage_key = ?',
+        [userDid, sourceImageStorageKey]
+      ) as {queue_order: number} | undefined;
+
+      if (!currentImage) {
+        throw new Error('Image not found');
+      }
+
+      const sourceOrder = currentImage.queue_order;
+      if (sourceOrder === destinationOrder) {
+        await db.run('COMMIT');
+        return;
+      }
+
       const tempOrder = -Math.abs(sourceOrder) - 10000;
       await db.run(`
         UPDATE queued_images
@@ -157,20 +158,36 @@ export async function reorderImageInQueue(
         WHERE user_did = ? AND storage_key = ?
       `, [tempOrder, userDid, sourceImageStorageKey]);
       
+      // Each bulk shift below runs as two passes through a disjoint negative
+      // range instead of a direct +1/-1 UPDATE. Mutating queue_order in place
+      // while scanning rows via the UNIQUE(user_did, queue_order) index that
+      // same UPDATE is using can transiently collide two rows on one value
+      // mid-statement (SQLITE_CONSTRAINT) since SQLite doesn't guarantee
+      // row-processing order for a bulk UPDATE.
       if (destinationOrder < sourceOrder) {
         // Moving left: increment everything from destination to source-1
         await db.run(`
           UPDATE queued_images
-          SET queue_order = queue_order + 1
+          SET queue_order = -queue_order
           WHERE user_did = ? AND queue_order >= ? AND queue_order < ?
         `, [userDid, destinationOrder, sourceOrder]);
+        await db.run(`
+          UPDATE queued_images
+          SET queue_order = -queue_order + 1
+          WHERE user_did = ? AND queue_order > ? AND queue_order <= ?
+        `, [userDid, -sourceOrder, -destinationOrder]);
       } else {
         // Moving right: decrement everything from source+1 to destination
         await db.run(`
           UPDATE queued_images
-          SET queue_order = queue_order - 1
+          SET queue_order = -queue_order
           WHERE user_did = ? AND queue_order > ? AND queue_order <= ?
         `, [userDid, sourceOrder, destinationOrder]);
+        await db.run(`
+          UPDATE queued_images
+          SET queue_order = -queue_order - 1
+          WHERE user_did = ? AND queue_order >= ? AND queue_order < ?
+        `, [userDid, -destinationOrder, -sourceOrder]);
       }
       
       await db.run(`
@@ -189,28 +206,38 @@ export async function reorderImageInQueue(
 
 export async function deleteFromImageQueue(userDid: string, storageKey: string): Promise<void> {
   return await useDatabase(async db => {
-    const imageToDelete = await db.get(
-      'SELECT queue_order FROM queued_images WHERE user_did = ? AND storage_key = ?',
-      [userDid, storageKey]
-    ) as {queue_order: number} | undefined;
-    
-    if (!imageToDelete) {
-      throw new Error('Image not found');
-    }
-    
     await db.run('BEGIN IMMEDIATE');
     try {
+      const imageToDelete = await db.get(
+        'SELECT queue_order FROM queued_images WHERE user_did = ? AND storage_key = ?',
+        [userDid, storageKey]
+      ) as {queue_order: number} | undefined;
+
+      if (!imageToDelete) {
+        throw new Error('Image not found');
+      }
+
       await db.run(
         'DELETE FROM queued_images WHERE user_did = ? AND storage_key = ?',
         [userDid, storageKey]
       );
-      
+
+      // Shift through a disjoint negative range first: decrementing queue_order
+      // directly while scanning the same UNIQUE(user_did, queue_order) index can
+      // transiently collide two rows on one value mid-statement (SQLITE_CONSTRAINT),
+      // since SQLite doesn't guarantee row-processing order for the bulk UPDATE.
       await db.run(`
         UPDATE queued_images
-        SET queue_order = queue_order - 1
+        SET queue_order = -queue_order
         WHERE user_did = ? AND queue_order > ?
       `, [userDid, imageToDelete.queue_order]);
-      
+
+      await db.run(`
+        UPDATE queued_images
+        SET queue_order = -queue_order - 1
+        WHERE user_did = ? AND queue_order < 0
+      `, [userDid]);
+
       await db.run('COMMIT');
     } catch (error) {
       await db.run('ROLLBACK');
