@@ -29,6 +29,25 @@ This image is posted to docker hub under `awushensky/image-poster`. Here is an e
       - ./image-poster/config:/config:ro       # Configuration
     ports:
       - 3000:3000
+
+  image-poster-backup:
+    container_name: image-poster-backup
+    image: awushensky/image-poster:latest
+    user: ${DOCKERUSER_USER_ID}:${DOCKERUSER_GROUP_ID}
+    restart: unless-stopped
+    environment:
+      - BACKUP_INCLUDE_UPLOADS=true  # set to false if uploads are already covered by an external backup system
+    volumes:
+      - ./image-poster/data:/app/data          # SQLite database (read)
+      - ./image-poster/uploads:/app/uploads    # Image uploads (read)
+      - ./image-poster/backups:/app/backups    # Backups (write)
+    entrypoint: >
+      sh -c 'while true; do
+        /app/scripts/backup.sh;
+        sleep 86400;
+      done'
+    security_opt:
+      - no-new-privileges:true
 ```
 
 ## Building
@@ -54,6 +73,26 @@ To build this image from source, you can build it using docker. Here's an exampl
       - ./image-poster/config:/config          # Configuation
     ports:
       - 3000:3000
+
+  image-poster-backup:
+    build:
+      context: ~/src/image-poster
+      target: base
+    container_name: image-poster-backup
+    restart: unless-stopped
+    environment:
+      - BACKUP_INCLUDE_UPLOADS=true  # set to false if uploads are already covered by an external backup system
+    volumes:
+      - ./image-poster/data:/app/data          # SQLite database (read)
+      - ./image-poster/uploads:/app/uploads    # Image uploads (read)
+      - ./image-poster/backups:/app/backups    # Backups (write)
+    entrypoint: >
+      sh -c 'while true; do
+        /app/scripts/backup.sh;
+        sleep 86400;
+      done'
+    security_opt:
+      - no-new-privileges:true
 ```
 
 Or if you want to run in development mode with hot reloading, use a configuration like this
@@ -91,19 +130,29 @@ Or if you want to run in development mode with hot reloading, use a configuratio
 
 ## Backups
 
-This application creates a backup of the database and uploaded images nightly at 03:00. It stores these in `/app/backups`.
+Backups run in a separate `image-poster-backup` sidecar container (see the example compose configurations above), independent of the main app's lifecycle. It runs once at container start and roughly every 24 hours after that, writing to `/app/backups`:
 
-Listing available backups:
+- `app.db` - a WAL-consistent snapshot of the SQLite database (via `sqlite3 .backup`), verified with `PRAGMA integrity_check` and swapped in atomically. A single file, overwritten in place each run - it is not a point-in-time archive, so pair it with an external backup system (e.g. restic, Backblaze, etc.) on the `/app/backups` bind mount if you need history or offsite retention.
+- `uploads.tar.gz` - a gzipped archive of the uploads directory, also overwritten in place each run. Set `BACKUP_INCLUDE_UPLOADS=false` on the sidecar if your uploads are already covered by an external backup system pointed at the `/app/uploads` bind mount directly - archiving them again here is pure duplication, and gzip's output defeats most backup tools' content-defined deduplication, so it's wasted storage on top of being redundant.
+
+Note: this relies on SQLite's WAL locking working correctly across the two containers sharing `/app/data`, which requires that mount to be real local disk (or an equivalent that supports proper POSIX file locking). It will not be reliable if that directory is backed by NFS or similar network filesystems - the same caveat that already applies to the app itself running SQLite in WAL mode.
+
+Listing current backups:
 ```
-docker exec image-poster /app/scripts/list-backups.sh
+docker exec image-poster-backup /app/scripts/list-backups.sh
 ```
 
-Creating a manual backup:
+Triggering a manual backup:
 ```
-docker exec image-poster /app/scripts/backup.sh
+docker exec image-poster-backup /app/scripts/backup.sh
 ```
 
-Restoring a backup:
+Restoring the current backup:
 ```
-docker exec image-poster /app/scripts/restore.sh backup_20251008_030000.tar.gz
+docker exec image-poster-backup /app/scripts/restore.sh
+```
+
+If you have older dated `backup_<timestamp>.tar.gz` archives from before this sidecar existed, they remain restorable:
+```
+docker exec image-poster-backup /app/scripts/restore.sh backup_20251008_030000.tar.gz
 ```
